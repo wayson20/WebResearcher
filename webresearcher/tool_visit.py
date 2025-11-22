@@ -5,7 +5,7 @@ from webresearcher.base import BaseTool
 from openai import OpenAI
 import time
 import tiktoken
-from webresearcher.prompt import EXTRACTOR_PROMPT
+from webresearcher.prompt import get_extractor_prompt
 from webresearcher.log import logger
 from webresearcher.config import (
     JINA_API_KEY,
@@ -185,7 +185,8 @@ class Visit(BaseTool):
 
         if content and not content.startswith("[visit] Failed to read page.") and content != "[visit] Empty content." and not content.startswith("[document_parser]"):
             content = truncate_to_tokens(content, max_tokens=95000)
-            messages = [{"role":"user","content": EXTRACTOR_PROMPT.format(webpage_content=content, goal=goal)}]
+            extractor_prompt_template = get_extractor_prompt(goal)
+            messages = [{"role":"user","content": extractor_prompt_template.format(webpage_content=content, goal=goal)}]
             parse_retry_times = 0
             raw = summary_page_func(messages, max_retries=max_retries)
             summary_retries = 3
@@ -202,7 +203,8 @@ class Visit(BaseTool):
                 )
                 logger.debug(status_msg)
                 content = content[:truncate_length]
-                extraction_prompt = EXTRACTOR_PROMPT.format(
+                extractor_prompt_template = get_extractor_prompt(goal)
+                extraction_prompt = extractor_prompt_template.format(
                     webpage_content=content,
                     goal=goal
                 )

@@ -235,6 +235,8 @@ class WebWeaverPlanner(BaseWebWeaverAgent):
 
         super().__init__(llm_config, tool_map)
         self.memory_bank = memory_bank
+        self.instruction = instruction
+        # system_prompt will be set dynamically in run() based on question language
         self.system_prompt = get_webweaver_planner_prompt(today_date(), self.function_list, instruction)
 
     def parse_output(self, text: str) -> Dict[str, str]:
@@ -287,6 +289,9 @@ class WebWeaverPlanner(BaseWebWeaverAgent):
             Final outline string
         """
         logger.debug("--- [WebWeaver] Planner Agent activated ---")
+        
+        # Update system prompt based on question language
+        self.system_prompt = get_webweaver_planner_prompt(today_date(), self.function_list, self.instruction, question=question)
 
         current_outline = "Outline is empty. Start by searching for information."
         last_observation = "No observation yet."
@@ -368,6 +373,8 @@ class WebWeaverWriter(BaseWebWeaverAgent):
 
         super().__init__(llm_config, tool_map)
         self.memory_bank = memory_bank
+        self.instruction = instruction
+        # system_prompt will be set dynamically in run() based on question language
         self.system_prompt = get_webweaver_writer_prompt(today_date(), instruction)
 
     def parse_output(self, text: str) -> Dict[str, str]:
@@ -421,6 +428,9 @@ class WebWeaverWriter(BaseWebWeaverAgent):
             Final report string
         """
         logger.debug("--- [WebWeaver] Writer Agent activated ---")
+        
+        # Update system prompt based on question language
+        self.system_prompt = get_webweaver_writer_prompt(today_date(), self.instruction, question=question)
 
         report_written_so_far = ""
         last_observation = "No observation yet. Start by retrieving evidence for the first section."

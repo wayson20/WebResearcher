@@ -311,7 +311,7 @@ class WebResearcherAgent:
 
         # 1. 初始化研究轮次
         research_round = ResearchRound(question=question)
-        system_prompt = get_iterresearch_system_prompt(today_date(), self.function_list, self.instruction)
+        system_prompt = get_iterresearch_system_prompt(today_date(), self.function_list, self.instruction, question=question)
 
         # 完整轨迹日志（用于调试）
         full_trajectory_log = []
@@ -339,6 +339,8 @@ class WebResearcherAgent:
 
             # 3. 单次 LLM 调用 (生成 P_i, R_i, A_i)
             content = ''
+            request_msgs = ''
+            is_last_call = False
             try:
                 logger.debug(f"Round {round_num}: Calling LLM. Remaining calls: {num_llm_calls_available}")
 

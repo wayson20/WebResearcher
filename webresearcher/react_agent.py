@@ -15,7 +15,7 @@ from openai import OpenAI, APIError, APIConnectionError, APITimeoutError
 
 from webresearcher.base import Message, build_text_completion_prompt, count_tokens as count_tokens_base
 from webresearcher.log import logger
-from webresearcher.prompt import get_system_prompt
+from webresearcher.prompt import get_react_system_prompt
 from webresearcher.tool_file import FileParser
 from webresearcher.tool_scholar import Scholar
 from webresearcher.tool_python import PythonInterpreter
@@ -192,7 +192,7 @@ class ReactAgent:
 
     async def run(self, question: str) -> Dict[str, str]:
         # Build system prompt with tool schemas and task-specific instruction handled inside prompt.py
-        system_prompt = get_system_prompt(today_date(), self.function_list, self.instruction)
+        system_prompt = get_react_system_prompt(today_date(), self.function_list, self.instruction, question=question)
         messages: List[Dict] = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": question},
