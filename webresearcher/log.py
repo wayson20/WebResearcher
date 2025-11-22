@@ -5,15 +5,12 @@ This module provides a centralized logger configuration that can be controlled
 via environment variables or programmatically.
 """
 
-import os
 import sys
 from loguru import logger as _logger
+from webresearcher.config import LOG_LEVEL
 
 # Remove default handler
 _logger.remove()
-
-# Get log level from environment variable, default to INFO
-LOG_LEVEL = os.getenv("WEBRESEARCHER_LOG_LEVEL", "INFO").upper()
 
 # Add custom handler with configurable level
 _logger.add(

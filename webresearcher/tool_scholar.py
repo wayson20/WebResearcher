@@ -1,5 +1,4 @@
 from typing import Union, List, Optional, Dict, Any
-import os
 import json
 from concurrent.futures import ThreadPoolExecutor
 import http.client
@@ -7,8 +6,7 @@ from contextlib import contextmanager
 
 from webresearcher.log import logger
 from webresearcher.base import BaseTool
-
-SERPER_API_KEY = os.environ.get('SERPER_API_KEY')
+from webresearcher.config import SERPER_API_KEY
 
 
 class Scholar(BaseTool):

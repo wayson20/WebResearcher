@@ -1,12 +1,10 @@
 from typing import Dict, List, Optional, Union
-import os
 import http.client
 import json
 from webresearcher.log import logger
 from webresearcher.base import BaseTool
+from webresearcher.config import SERPER_API_KEY
 
-
-SERPER_API_KEY = os.environ.get('SERPER_API_KEY')
 logger.debug(f"SERPER_API_KEY: {SERPER_API_KEY}")
 
 

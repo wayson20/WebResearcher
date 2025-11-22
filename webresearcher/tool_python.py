@@ -12,8 +12,7 @@ from requests.exceptions import Timeout
 
 from webresearcher.base import BaseToolWithFileAccess, extract_code
 from webresearcher.log import logger
-
-SANDBOX_FUSION_ENDPOINTS = os.environ.get('SANDBOX_FUSION_ENDPOINTS', '').split(',')
+from webresearcher.config import SANDBOX_FUSION_ENDPOINTS
 
 
 def has_chinese_chars(texts: List[str]) -> bool:
@@ -105,7 +104,7 @@ class PythonInterpreter(BaseToolWithFileAccess):
                 return '[Python Interpreter Error]: Empty code.'
 
             # Check if endpoints are available, fallback to local execution
-            if not SANDBOX_FUSION_ENDPOINTS or SANDBOX_FUSION_ENDPOINTS == ['']:
+            if not SANDBOX_FUSION_ENDPOINTS:
                 logger.debug('No sandbox fusion endpoints available, falling back to local execution')
                 return self.run_python_code_locally(code)
 

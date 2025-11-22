@@ -63,7 +63,7 @@ async def example_basic_research():
     )
     
     print(f"Model: {agent.model}")
-    print(f"Base URL: {os.getenv('OPENAI_BASE_URL', 'default')}")
+    print(f"Base URL: {os.getenv('LLM_BASE_URL', 'default')}")
     print(f"Log Level: {log.LOG_LEVEL}\n")
     
     # Run research - factual question

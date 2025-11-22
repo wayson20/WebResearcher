@@ -25,13 +25,14 @@ from webresearcher.tool_planner_visit import PlannerVisitTool
 from webresearcher.tool_planner_python import PlannerPythonTool
 from webresearcher.tool_planner_file import PlannerFileTool
 from webresearcher.config import (
-    OPENAI_API_KEY, 
-    OPENAI_BASE_URL, 
+    LLM_API_KEY, 
+    LLM_BASE_URL, 
     OBS_START, 
     OBS_END, 
     MAX_LLM_CALL_PER_RUN, 
     AGENT_TIMEOUT, 
-    FILE_DIR
+    FILE_DIR,
+    LLM_MODEL_NAME
 )
 
 
@@ -56,15 +57,15 @@ class BaseWebWeaverAgent:
         """
         self.llm_config = llm_config
         self.llm_generate_cfg = self.llm_config.get("generate_cfg", {})
-        self.model = self.llm_config.get("model", "gpt-4o")
+        self.model = self.llm_config.get("model", LLM_MODEL_NAME)
         self.llm_timeout = self.llm_config.get("llm_timeout", 300.0)
         self.tool_map = tool_map
         self.function_list = list(tool_map.keys())
-        self.openai_api_key = self.llm_config.get("openai_api_key", OPENAI_API_KEY)
-        self.openai_base_url = self.llm_config.get("openai_base_url", OPENAI_BASE_URL)
+        self.api_key = self.llm_config.get("api_key", LLM_API_KEY)
+        self.base_url = self.llm_config.get("base_url", LLM_BASE_URL)
         self.client = OpenAI(
-            api_key=self.openai_api_key,
-            base_url=self.openai_base_url,
+            api_key=self.api_key,
+            base_url=self.base_url,
             timeout=self.llm_timeout,
         )
         # Cache for idempotent tool calls to avoid redundant executions (e.g., repeated retrieve on same IDs)
@@ -125,7 +126,7 @@ class BaseWebWeaverAgent:
 
             except (APIError, APIConnectionError, APITimeoutError) as e:
                 logger.warning(
-                    f"Attempt {attempt + 1} API error: {e}, base_url: {self.openai_base_url}, api_key: {self.openai_api_key}, model: {self.model}")
+                    f"Attempt {attempt + 1} API error: {e}, base_url: {self.base_url}, api_key: {self.api_key}, model: {self.model}")
             except Exception as e:
                 logger.error(f"Attempt {attempt + 1} unexpected error: {e}")
 
@@ -562,7 +563,7 @@ class WebWeaverAgent:
             llm_config: LLM configuration dict
         """
         base_config = llm_config or {
-            "model": "gpt-4o",
+            "model": LLM_MODEL_NAME,
             "generate_cfg": {
                 "temperature": 0.1,
                 "top_p": 0.95,
@@ -572,9 +573,9 @@ class WebWeaverAgent:
         }
         self.llm_config = dict(base_config)
         if api_key:
-            self.llm_config["openai_api_key"] = api_key
+            self.llm_config["api_key"] = api_key
         if base_url:
-            self.llm_config["openai_base_url"] = base_url
+            self.llm_config["base_url"] = base_url
         
         # Initialize shared memory bank
         self.memory_bank = MemoryBank()
@@ -650,7 +651,7 @@ async def main():
     set_log_level("DEBUG")
     
     llm_config = {
-        "model": "gpt-4o",
+        "model": LLM_MODEL_NAME,
         "generate_cfg": {
             "temperature": 0.1,
             "top_p": 0.95,
@@ -659,7 +660,7 @@ async def main():
         "llm_timeout": 300.0,
     }
     agent = WebWeaverAgent(llm_config=llm_config)
-    print(OPENAI_API_KEY)
+    print(LLM_API_KEY)
     question =  "刘翔破纪录时候是多少岁?"
     result = await agent.run(question)
     print(result)

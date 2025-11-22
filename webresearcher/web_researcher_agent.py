@@ -12,7 +12,8 @@ import time
 
 from typing import Dict, List, Optional
 from openai import OpenAI, APIError, APIConnectionError, APITimeoutError
-
+import sys
+sys.path.append('..')
 from webresearcher.base import Message, build_text_completion_prompt, count_tokens as count_tokens_base
 from webresearcher.log import logger
 from webresearcher.prompt import get_iterresearch_system_prompt
@@ -22,13 +23,14 @@ from webresearcher.tool_python import PythonInterpreter
 from webresearcher.tool_search import Search
 from webresearcher.tool_visit import Visit
 from webresearcher.config import (
-    OPENAI_API_KEY, 
-    OPENAI_BASE_URL, 
+    LLM_API_KEY, 
+    LLM_BASE_URL, 
     OBS_START, 
     OBS_END, 
     MAX_LLM_CALL_PER_RUN, 
     AGENT_TIMEOUT, 
-    FILE_DIR
+    FILE_DIR,
+    LLM_MODEL_NAME
 )
 
 
@@ -105,15 +107,15 @@ class WebResearcherAgent:
     ):
         llm_config = dict(llm_config or {})
         if api_key:
-            llm_config["openai_api_key"] = api_key
+            llm_config["api_key"] = api_key
         if base_url:
-            llm_config["openai_base_url"] = base_url
+            llm_config["base_url"] = base_url
 
         self.llm_config = llm_config
         self.llm_generate_cfg = self.llm_config.get("generate_cfg", {})
-        self.model = self.llm_config.get("model", "gpt-4o")  # 主模型
-        self.openai_api_key = self.llm_config.get("openai_api_key", OPENAI_API_KEY)
-        self.openai_base_url = self.llm_config.get("openai_base_url", OPENAI_BASE_URL)
+        self.model = self.llm_config.get("model", LLM_MODEL_NAME)  # 主模型
+        self.api_key = self.llm_config.get("api_key", LLM_API_KEY)
+        self.base_url = self.llm_config.get("base_url", LLM_BASE_URL)
         self.max_input_tokens = self.llm_config.get("max_input_tokens", 32000)
         self.llm_timeout = self.llm_config.get("llm_timeout", 300.0)
         self.agent_timeout = self.llm_config.get("agent_timeout", 600.0)
@@ -166,8 +168,8 @@ class WebResearcherAgent:
                           max_tries: int = 1) -> str:
         """异步方法，并使用 run_in_executor 处理同步的 OpenAI 库"""
         client = OpenAI(
-            api_key=self.openai_api_key,
-            base_url=self.openai_base_url,
+            api_key=self.api_key,
+            base_url=self.base_url,
             timeout=self.llm_timeout,
         )
 
@@ -212,7 +214,7 @@ class WebResearcherAgent:
 
             except (APIError, APIConnectionError, APITimeoutError) as e:
                 logger.warning(
-                    f"Attempt {attempt + 1} API error: {e}, base_url: {self.openai_base_url}, api_key: {self.openai_api_key}, model: {self.model}")
+                    f"Attempt {attempt + 1} API error: {e}, base_url: {self.base_url}, api_key: {self.api_key}, model: {self.model}")
             except Exception as e:
                 logger.error(f"Attempt {attempt + 1} unexpected error: {e}")
 
@@ -225,7 +227,9 @@ class WebResearcherAgent:
                 logger.error("All retry attempts exhausted. The LLM call failed.")
         return "LLM server error."
 
-    def count_tokens(self, messages, model="gpt-4o"):
+    def count_tokens(self, messages, model=None):
+        if model is None:
+            model = LLM_MODEL_NAME
         """Count tokens in messages"""
         try:
             # Convert dict messages to Message objects if needed
@@ -513,7 +517,7 @@ class WebResearcherAgent:
 async def main():
     # 1. 定义你的 LLM 配置
     llm_config = {
-        "model": "gpt-4o",
+        "model": LLM_MODEL_NAME,
         "generate_cfg": {
             'max_input_tokens': 32000,
             "temperature": 0.6,

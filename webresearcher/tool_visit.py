@@ -1,5 +1,4 @@
 import json
-import os
 from typing import List, Union
 import requests
 from webresearcher.base import BaseTool
@@ -8,12 +7,13 @@ import time
 import tiktoken
 from webresearcher.prompt import EXTRACTOR_PROMPT
 from webresearcher.log import logger
-
-
-VISIT_SERVER_TIMEOUT = int(os.getenv("VISIT_SERVER_TIMEOUT", 200))
-WEBCONTENT_MAXLENGTH = int(os.getenv("WEBCONTENT_MAXLENGTH", 150000))
-
-JINA_API_KEY = os.environ.get('JINA_API_KEY')
+from webresearcher.config import (
+    JINA_API_KEY,
+    LLM_API_KEY,
+    LLM_BASE_URL,
+    SUMMARY_MODEL_NAME,
+    VISIT_SERVER_MAX_RETRIES,
+)
 
 
 def truncate_to_tokens(text: str, max_tokens: int = 95000) -> str:
@@ -90,17 +90,14 @@ class Visit(BaseTool):
         return response
         
     def call_server(self, msgs, max_retries=2):
-        api_key = os.getenv("OPENAI_API_KEY")
-        url_llm = os.getenv("OPENAI_BASE_URL")
-        model_name = os.getenv("SUMMARY_MODEL_NAME", "gpt-4o-mini")
         client = OpenAI(
-            api_key=api_key,
-            base_url=url_llm,
+            api_key=LLM_API_KEY,
+            base_url=LLM_BASE_URL,
         )
         for attempt in range(max_retries):
             try:
                 chat_response = client.chat.completions.create(
-                    model=model_name,
+                    model=SUMMARY_MODEL_NAME,
                     messages=msgs,
                     temperature=0.7
                 )
@@ -182,7 +179,7 @@ class Visit(BaseTool):
         """
    
         summary_page_func = self.call_server
-        max_retries = int(os.getenv('VISIT_SERVER_MAX_RETRIES', 1))
+        max_retries = VISIT_SERVER_MAX_RETRIES
 
         content = self.html_readpage_jina(url)
 

@@ -112,7 +112,7 @@ pip install webresearcher
 
 ```bash
 # 设置 API 密钥
-export OPENAI_API_KEY="your_key"
+export LLM_API_KEY="your_key"
 export SERPER_API_KEY="your_key"
 
 # 运行研究查询
@@ -128,13 +128,17 @@ from webresearcher import WebResearcherAgent
 # 配置
 llm_config = {
     "model": "gpt-4o",
+    "api_key": "your-api-key",      # 可选，默认从环境变量 LLM_API_KEY 读取
+    "base_url": "https://api.openai.com/v1",  # 可选，默认从环境变量 LLM_BASE_URL 读取
     "generate_cfg": {"temperature": 0.6}
 }
 
-# 创建 Agent
+# 创建 Agent（也可以通过参数直接传入 api_key 和 base_url）
 agent = WebResearcherAgent(
     llm_config=llm_config,
-    function_list=["search", "google_scholar", "python"]
+    function_list=["search", "google_scholar", "python"],
+    api_key="your-api-key",    # 可选，会覆盖 llm_config 中的设置
+    base_url="https://api.openai.com/v1"  # 可选
 )
 
 # 开始研究
@@ -157,12 +161,16 @@ from webresearcher.react_agent import ReactAgent
 
 llm_config = {
     "model": "gpt-4o",
+    "api_key": "your-api-key",      # 可选，默认从环境变量 LLM_API_KEY 读取
+    "base_url": "https://api.openai.com/v1",  # 可选，默认从环境变量 LLM_BASE_URL 读取
     "generate_cfg": {"temperature": 0.6}
 }
 
 agent = ReactAgent(
     llm_config=llm_config,
-    function_list=["search", "google_scholar", "visit", "python"]
+    function_list=["search", "google_scholar", "visit", "python"],
+    api_key="your-api-key",    # 可选，会覆盖 llm_config 中的设置
+    base_url="https://api.openai.com/v1"  # 可选
 )
 
 async def main():
@@ -339,11 +347,12 @@ result = await agent.run("你的问题")
 
 ```bash
 # 必需
-OPENAI_API_KEY=...              # OpenAI API 密钥 或 DeepSeek API 密钥
+LLM_API_KEY=...              # LLM API 密钥 (OpenAI/DeepSeek 等)
 SERPER_API_KEY=...                 # Serper API（Google 搜索）
 
 # 可选
-OPENAI_BASE_URL=https://...        # 自定义 OpenAI 端点, 或 DeepSeek base url
+LLM_BASE_URL=https://...        # 自定义 LLM 端点, 或 DeepSeek base url
+LLM_MODEL_NAME=gpt-4o          # 默认模型名称
 JINA_API_KEY=...                   # Jina AI（网页抓取）
 SANDBOX_FUSION_ENDPOINTS=...       # 代码执行沙盒
 MAX_LLM_CALL_PER_RUN=50           # 每次研究的最大迭代次数
@@ -355,6 +364,8 @@ FILE_DIR=./files                   # 文件存储目录
 ```python
 llm_config = {
     "model": "deepseek-v3.1",              # 或: o3-mini, gpt-4-turbo 等
+    "api_key": "your-api-key",             # 可选，默认从环境变量 LLM_API_KEY 读取
+    "base_url": "https://api.openai.com/v1",  # 可选，默认从环境变量 LLM_BASE_URL 读取
     "generate_cfg": {
         "temperature": 0.6,          # 采样温度 (0.0-2.0)
         "top_p": 0.95,              # 核采样

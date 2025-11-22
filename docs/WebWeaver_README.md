@@ -139,8 +139,8 @@ Choose **WebResearcher** when you need:
 
 ```bash
 # Required
-export OPENAI_API_KEY="your-api-key"
-export OPENAI_BASE_URL="https://api.openai.com/v1"  # Optional
+export LLM_API_KEY="your-api-key"
+export LLM_BASE_URL="https://api.openai.com/v1"  # Optional
 
 # Optional
 export SERPER_API_KEY="your-serper-key"  # For web search

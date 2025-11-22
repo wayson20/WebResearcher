@@ -14,6 +14,13 @@ from PIL import Image
 from openai import OpenAI
 from webresearcher.log import logger
 from webresearcher.base import BaseTool
+from webresearcher.config import (
+    DASHSCOPE_API_KEY,
+    DASHSCOPE_API_BASE,
+    VIDEO_MODEL_NAME,
+    VIDEO_ANALYSIS_MODEL_NAME,
+    PROJECT_ROOT,
+)
 
 # Configuration constants
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB
@@ -84,10 +91,10 @@ class VideoAnalysis(BaseTool):
     def _init_config(self, cfg: Dict) -> Dict:
         """Initialize configuration with sensible defaults"""
         return {
-            'api_key': os.getenv('DASHSCOPE_API_KEY', ''),
-            'api_base': cfg.get('api_base') or os.getenv('DASHSCOPE_API_BASE', ''),
-            'video_model': cfg.get('video_model') or os.getenv('VIDEO_MODEL_NAME', 'qwen-omni-turbo'),
-            'analysis_model': cfg.get('analysis_model') or os.getenv('VIDEO_ANALYSIS_MODEL_NAME', 'qwen-plus-latest'),
+            'api_key': cfg.get('api_key') or DASHSCOPE_API_KEY,
+            'api_base': cfg.get('api_base') or DASHSCOPE_API_BASE,
+            'video_model': cfg.get('video_model') or VIDEO_MODEL_NAME,
+            'analysis_model': cfg.get('analysis_model') or VIDEO_ANALYSIS_MODEL_NAME,
             'timeout': min(cfg.get('timeout', 30), 300),  # Cap at 300 seconds
             'max_frames': min(cfg.get('max_frames', 20), 50),  # Cap at 50 frames
             'max_file_size': MAX_FILE_SIZE
@@ -307,8 +314,7 @@ class VideoAnalysis(BaseTool):
         """Resolve local file path, handling relative paths"""
         media_path = Path(path)
         if not media_path.is_absolute():
-            base_path = Path(os.getenv('PROJECT_ROOT', os.getcwd()))
-            media_path = base_path / media_path
+            media_path = PROJECT_ROOT / media_path
 
         if not media_path.exists():
             raise FileNotFoundError(f"File not found: {media_path}")

@@ -22,12 +22,13 @@ from webresearcher.tool_python import PythonInterpreter
 from webresearcher.tool_search import Search
 from webresearcher.tool_visit import Visit
 from webresearcher.config import (
-    OPENAI_API_KEY,
-    OPENAI_BASE_URL,
+    LLM_API_KEY,
+    LLM_BASE_URL,
     OBS_START,
     OBS_END,
     MAX_LLM_CALL_PER_RUN,
     FILE_DIR,
+    LLM_MODEL_NAME,
 )
 
 
@@ -58,15 +59,15 @@ class ReactAgent:
     ) -> None:
         llm_config = dict(llm_config or {})
         if api_key:
-            llm_config["openai_api_key"] = api_key
+            llm_config["api_key"] = api_key
         if base_url:
-            llm_config["openai_base_url"] = base_url
+            llm_config["base_url"] = base_url
 
         self.llm_config = llm_config
-        self.model = self.llm_config.get("model", "gpt-4o")
+        self.model = self.llm_config.get("model", LLM_MODEL_NAME)
         self.generate_cfg = self.llm_config.get("generate_cfg", {"temperature": 0.6, "top_p": 0.95})
-        self.openai_api_key = self.llm_config.get("openai_api_key", OPENAI_API_KEY)
-        self.openai_base_url = self.llm_config.get("openai_base_url", OPENAI_BASE_URL)
+        self.api_key = self.llm_config.get("api_key", LLM_API_KEY)
+        self.base_url = self.llm_config.get("base_url", LLM_BASE_URL)
         self.llm_timeout = self.llm_config.get("llm_timeout", 600.0)
 
         self.function_list = function_list or list(TOOL_MAP.keys())
@@ -88,8 +89,8 @@ class ReactAgent:
 
     async def call_server(self, msgs: List[Dict], stop_sequences: Optional[List[str]] = None, max_tries: int = 5) -> str:
         client = OpenAI(
-            api_key=self.openai_api_key or "EMPTY",
-            base_url=self.openai_base_url,
+            api_key=self.api_key or "EMPTY",
+            base_url=self.base_url,
             timeout=self.llm_timeout,
         )
         base_sleep_time = 1

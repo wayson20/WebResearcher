@@ -4,7 +4,7 @@ This directory contains example scripts for both WebResearcher (single-agent Ite
 
 ## Files
 
-- `basic_usage.py` - Basic examples covering single-agent and TTS modes
+- `web_researcher_usage.py` - Basic examples covering single-agent and TTS modes
 - `custom_agent.py` - Building custom agents with custom tools
 - `batch_research.py` - Processing multiple questions in batch
 - `webweaver_usage.py` - WebWeaver dual-agent examples (Planner + Writer)
@@ -16,10 +16,10 @@ This directory contains example scripts for both WebResearcher (single-agent Ite
 cd examples
 
 # Run WebResearcher basic example
-python basic_usage.py
+python web_researcher_usage.py
 
 # Run with verbose logging
-python basic_usage.py --verbose
+python web_researcher_usage.py --verbose
 
 # Run WebWeaver examples (dual-agent)
 python webweaver_usage.py
@@ -34,13 +34,15 @@ python webweaver_usage.py
 
 2. Configure environment variables in `.env`:
    ```bash
-   OPENAI_API_KEY=your_key
-   SERPER_API_KEY=your_key
-   ```
-
-   Optional (for web content extraction):
-   ```bash
-   JINA_API_KEY=your_key
+   # Required
+   LLM_API_KEY=your_key          # LLM API key (OpenAI/DeepSeek etc.)
+   SERPER_API_KEY=your_key       # Serper API for Google Search
+   
+   # Optional
+   LLM_BASE_URL=https://...      # Custom LLM endpoint
+   LLM_MODEL_NAME=gpt-4o         # Default model name
+   JINA_API_KEY=your_key         # Jina AI for web scraping
+   SANDBOX_FUSION_ENDPOINTS=...  # Code execution sandbox endpoints
    ```
 
 3. Run the examples!

@@ -77,8 +77,8 @@ def test_planner_parse_output():
     memory = MemoryBank()
     # Mock OpenAI client to avoid API key requirement
     with pytest.MonkeyPatch().context() as m:
-        m.setenv("OPENAI_API_KEY", "test-key")
-        m.setenv("OPENAI_BASE_URL", "http://test")
+        m.setenv("LLM_API_KEY", "test-key")
+        m.setenv("LLM_BASE_URL", "http://test")
         planner = WebWeaverPlanner(llm_config, memory)
 
         # Test tool_call parsing
@@ -124,8 +124,8 @@ def test_writer_parse_output():
     memory = MemoryBank()
     # Mock OpenAI client to avoid API key requirement
     with pytest.MonkeyPatch().context() as m:
-        m.setenv("OPENAI_API_KEY", "test-key")
-        m.setenv("OPENAI_BASE_URL", "http://test")
+        m.setenv("LLM_API_KEY", "test-key")
+        m.setenv("LLM_BASE_URL", "http://test")
         writer = WebWeaverWriter(llm_config, memory)
 
         # Test retrieve parsing
@@ -163,8 +163,8 @@ def test_webweaver_agent_initialization():
 
     # Mock OpenAI client to avoid API key requirement
     with pytest.MonkeyPatch().context() as m:
-        m.setenv("OPENAI_API_KEY", "test-key")
-        m.setenv("OPENAI_BASE_URL", "http://test")
+        m.setenv("LLM_API_KEY", "test-key")
+        m.setenv("LLM_BASE_URL", "http://test")
         agent = WebWeaverAgent(llm_config)
 
         assert agent.memory_bank is not None

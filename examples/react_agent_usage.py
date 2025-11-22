@@ -117,8 +117,8 @@ async def example_react_with_custom_config():
     # Configure LLM with custom base_url (example for local vLLM)
     llm_config = {
         "model": "gpt-4o",  # or your local model name
-        "openai_base_url": "http://127.0.0.1:8000/v1",  # Example local endpoint
-        "openai_api_key": "EMPTY",  # May not be needed for local
+        "base_url": "http://127.0.0.1:8000/v1",  # Example local endpoint
+        "api_key": "EMPTY",  # May not be needed for local
         "generate_cfg": {
             "temperature": 0.6,
             "top_p": 0.95,
@@ -135,7 +135,7 @@ async def example_react_with_custom_config():
     # Define question
     question = "Who won the Nobel Prize in Physics in 2023?"
     logger.info(f"Question: {question}")
-    logger.info(f"Using base_url: {llm_config['openai_base_url']}")
+    logger.info(f"Using base_url: {llm_config['base_url']}")
     
     # Run agent
     result = await agent.run(question)

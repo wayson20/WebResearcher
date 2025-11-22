@@ -111,7 +111,7 @@ pip install webresearcher
 
 ```bash
 # Set your API keys
-export OPENAI_API_KEY="your_key"
+export LLM_API_KEY="your_key"
 export SERPER_API_KEY="your_key"
 
 # Run a research query
@@ -127,13 +127,17 @@ from webresearcher import WebResearcherAgent
 # Configure
 llm_config = {
     "model": "gpt-4o",
+    "api_key": "your-api-key",      # Optional, defaults to LLM_API_KEY env var
+    "base_url": "https://api.openai.com/v1",  # Optional, defaults to LLM_BASE_URL env var
     "generate_cfg": {"temperature": 0.6}
 }
 
-# Create agent
+# Create agent (can also pass api_key and base_url directly as parameters)
 agent = WebResearcherAgent(
     llm_config=llm_config,
-    function_list=["search", "google_scholar", "python"]
+    function_list=["search", "google_scholar", "python"],
+    api_key="your-api-key",    # Optional, overrides llm_config setting
+    base_url="https://api.openai.com/v1"  # Optional
 )
 
 # Research
@@ -156,12 +160,16 @@ from webresearcher.react_agent import ReactAgent
 
 llm_config = {
     "model": "gpt-4o",
+    "api_key": "your-api-key",      # Optional, defaults to LLM_API_KEY env var
+    "base_url": "https://api.openai.com/v1",  # Optional, defaults to LLM_BASE_URL env var
     "generate_cfg": {"temperature": 0.6}
 }
 
 agent = ReactAgent(
     llm_config=llm_config,
-    function_list=["search", "google_scholar", "visit", "python"]
+    function_list=["search", "google_scholar", "visit", "python"],
+    api_key="your-api-key",    # Optional, overrides llm_config setting
+    base_url="https://api.openai.com/v1"  # Optional
 )
 
 async def main():
@@ -344,11 +352,12 @@ Based on the paper's evaluation:
 
 ```bash
 # Required
-OPENAI_API_KEY=...              # OpenAI API key or deepseek api key
+LLM_API_KEY=...              # LLM API key (OpenAI/DeepSeek etc.)
 SERPER_API_KEY=...                 # Serper API for Google Search
 
 # Optional
-OPENAI_BASE_URL=https://...        # Custom OpenAI endpoint, or deepseek base url
+LLM_BASE_URL=https://...        # Custom LLM endpoint, or deepseek base url
+LLM_MODEL_NAME=gpt-4o          # Default model name
 JINA_API_KEY=...                   # Jina AI for web scraping
 SANDBOX_FUSION_ENDPOINTS=...       # Code execution sandbox
 MAX_LLM_CALL_PER_RUN=50           # Max iterations per research
@@ -360,6 +369,8 @@ FILE_DIR=./files                   # File storage directory
 ```python
 llm_config = {
     "model": "deepseek-v3.1",              # Or: o3-mini, gpt-4-turbo, etc.
+    "api_key": "your-api-key",             # Optional, defaults to LLM_API_KEY env var
+    "base_url": "https://api.openai.com/v1",  # Optional, defaults to LLM_BASE_URL env var
     "generate_cfg": {
         "temperature": 0.6,          # Sampling temperature (0.0-2.0)
         "top_p": 0.95,              # Nucleus sampling
@@ -431,6 +442,8 @@ async def main():
     # Configure LLM
     llm_config = {
         "model": "gpt-4o",
+        "api_key": "your-api-key",      # Optional, defaults to LLM_API_KEY env var
+        "base_url": "https://api.openai.com/v1",  # Optional, defaults to LLM_BASE_URL env var
         "generate_cfg": {
             "temperature": 0.1,  # Low temperature for factual research
             "top_p": 0.95,
@@ -439,8 +452,12 @@ async def main():
         "llm_timeout": 300.0,
     }
     
-    # Initialize agent
-    agent = WebWeaverAgent(llm_config=llm_config)
+    # Initialize agent (can also pass api_key and base_url directly as parameters)
+    agent = WebWeaverAgent(
+        llm_config=llm_config,
+        api_key="your-api-key",    # Optional, overrides llm_config setting
+        base_url="https://api.openai.com/v1"  # Optional
+    )
     
     # Run research
     question = "What are the main causes of climate change?"

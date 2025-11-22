@@ -129,6 +129,7 @@ Your task in a single turn is to generate a structured response containing three
    - Critically evaluate: Is the information sufficient? Are there gaps, contradictions, or new leads?
    - Formulate a plan for the *current* round. What do you need to do *now*?
    - This block is your private thought process, but should be expressed as an external plan. 
+   - The plan should be in the same language as the question.
 
 **2. `<report>` Block (Evolving Central Memory):**
    - **Crucially**, you must update your research report (R_i).
@@ -137,6 +138,7 @@ Your task in a single turn is to generate a structured response containing three
    - It should correct any previous errors, remove redundancies, and integrate new facts.
    - If the observation (O_{{i-1}}) was not useful or was an error, you should still state that and return the *previous* report content unchanged or with minimal updates.
    - This block will be the *only* memory (besides the original question) carried forward to the next round.
+   - The report should be in the same language as the question.
 
 **3. `<tool_call>`, `<answer>`, or `<terminate>` Block (Action):**
    - Based on your `<plan>` and your *newly updated* `<report>`, decide the next step.
