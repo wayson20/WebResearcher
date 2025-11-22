@@ -55,7 +55,8 @@ class TestTimeScalingAgent:
         function_list: List of tool names to enable
     """
 
-    def __init__(self, llm_config: Dict, function_list: List[str]):
+    def __init__(self, llm_config: Optional[Dict] = None, function_list: Optional[List[str]] = None, **kwargs):
+        llm_config = dict(llm_config or {})
         self.llm_config = llm_config
         self.function_list = function_list
 

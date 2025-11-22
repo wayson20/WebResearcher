@@ -137,7 +137,6 @@ llm_config = {
 agent = WebResearcherAgent(
     llm_config=llm_config,
     function_list=["search", "google_scholar", "python"],
-    api_key="your-api-key",    # 可选，会覆盖 llm_config 中的设置
     base_url="https://api.openai.com/v1"  # 可选
 )
 
@@ -169,7 +168,6 @@ llm_config = {
 agent = ReactAgent(
     llm_config=llm_config,
     function_list=["search", "google_scholar", "visit", "python"],
-    api_key="your-api-key",    # 可选，会覆盖 llm_config 中的设置
     base_url="https://api.openai.com/v1"  # 可选
 )
 
@@ -222,7 +220,7 @@ class MyCustomTool(BaseTool):
 
 # 注册并使用
 TOOL_MAP['my_tool'] = MyCustomTool()
-agent = WebResearcherAgent(llm_config, function_list=["my_tool", "search"])
+agent = WebResearcherAgent(function_list=["my_tool", "search"])
 ```
 
 查看 [examples/custom_agent.py](./examples/custom_agent.py) 获取完整示例。
@@ -235,7 +233,7 @@ agent = WebResearcherAgent(llm_config, function_list=["my_tool", "search"])
 from webresearcher import WebResearcherAgent
 
 questions = ["问题 1", "问题 2", "问题 3"]
-agent = WebResearcherAgent(llm_config)
+agent = WebResearcherAgent()
 
 for question in questions:
     result = await agent.run(question)
@@ -284,7 +282,7 @@ webresearcher "你的问题"
 **编程方式：**
 
 ```python
-from webresearcher import set_log_level, add_file_logger
+from webresearcher import set_log_level, add_file_logger, WebResearcherAgent
 
 # 设置控制台日志级别
 set_log_level("WARNING")  # 只显示警告和错误
@@ -293,7 +291,7 @@ set_log_level("WARNING")  # 只显示警告和错误
 add_file_logger("research.log", level="DEBUG")
 
 # 现在执行研究
-agent = WebResearcherAgent(llm_config)
+agent = WebResearcherAgent()
 result = await agent.run("你的问题")
 ```
 
