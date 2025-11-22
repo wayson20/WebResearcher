@@ -43,18 +43,6 @@ from webresearcher.react_agent import (
     ReactAgent,
 )
 
-from webresearcher.tool_memory import (
-    MemoryBank,
-    RetrieveTool,
-)
-
-from webresearcher.tool_planner_search import PlannerSearchTool
-from webresearcher.tool_planner_scholar import PlannerScholarTool
-from webresearcher.tool_planner_visit import PlannerVisitTool
-from webresearcher.tool_planner_python import PlannerPythonTool
-from webresearcher.tool_planner_file import PlannerFileTool
-
-# Logger
 from webresearcher.log import (
     logger,
     set_log_level,
@@ -67,6 +55,18 @@ from webresearcher.tool_visit import Visit
 from webresearcher.tool_scholar import Scholar
 from webresearcher.tool_python import PythonInterpreter
 from webresearcher.tool_file import FileParser
+
+from webresearcher.tool_memory import (
+    MemoryBank,
+    RetrieveTool,
+)
+
+from webresearcher.tool_planner_search import PlannerSearchTool
+from webresearcher.tool_planner_scholar import PlannerScholarTool
+from webresearcher.tool_planner_visit import PlannerVisitTool
+from webresearcher.tool_planner_python import PlannerPythonTool
+from webresearcher.tool_planner_file import PlannerFileTool
+
 
 __all__ = [
     # Version
@@ -82,8 +82,7 @@ __all__ = [
     "WebWeaverWriter",
     "TestTimeScalingAgent",
     "ReactAgent",
-    "TOOL_MAP",
-    
+
     # Base classes
     "Message",
     "MessageRole",
