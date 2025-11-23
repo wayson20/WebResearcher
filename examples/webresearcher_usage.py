@@ -68,6 +68,7 @@ async def example_basic_research():
     
     # Run research - factual question
     question = "刘翔破纪录时候是多少岁?代码计算下。"
+    # question = "你是谁，多大"
     print(f"🔍 Researching: {question}\n")
     result = await agent.run(question)
     

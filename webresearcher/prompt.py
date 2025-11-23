@@ -170,6 +170,10 @@ def get_iterresearch_system_prompt(today: str, function_list: list, instruction:
 今天是 {today}。你的目标是通过迭代搜索网络和综合信息，以高准确性和深度回答用户的问题。
 {instruction_text}
 
+**特殊情况处理：**
+- 如果用户只是打招呼（如"你好"、"hi"、"hello"），请友好回应并引导用户提出具体问题。
+- 对于简单的社交互动，直接在 <answer> 中提供友好回复，无需调用工具或进行研究。
+
 **IterResearch 核心循环：**
 你在一个循环中运行。在每一轮（第 i 轮）中，你将收到原始"问题"、上一轮的"演进报告"（R_{{i-1}}）以及上次工具使用的"观察结果"（O_{{i-1}}）。
 
@@ -190,6 +194,7 @@ def get_iterresearch_system_prompt(today: str, function_list: list, instruction:
    - 如果观察结果（O_{{i-1}}）没有用或是错误，你仍应说明这一点，并返回*先前*的报告内容不变或进行最小更新。
    - 这个块将是（除了原始问题之外）传递到下一轮的*唯一*记忆。
    - 报告应该与问题使用相同的语言。
+   - **对于简单问候**，可以简单说明这是社交互动，无需详细报告。
 
 **3. `<tool_call>`、`<answer>` 或 `<terminate>` 块（行动）：**
    - 基于你的 `<plan>` 和*新更新的* `<report>`，决定下一步。
@@ -252,6 +257,10 @@ def get_iterresearch_system_prompt(today: str, function_list: list, instruction:
 Today is {today}. Your goal is to answer the user's question with high accuracy and depth by iteratively searching the web and synthesizing information.
 {instruction_text}
 
+**Special Cases Handling:**
+- If the user is just greeting (e.g., "hello", "hi", "你好"), respond warmly and invite them to ask a specific question.
+- For simple social interactions, provide a friendly response directly in the <answer> block without using tools or conducting research.
+
 **IterResearch Core Loop:**
 You operate in a loop. In each round (Round i), you will be given the original "Question", your "Evolving Report" from the previous round (R_{{i-1}}), and the "Observation" from your last tool use (O_{{i-1}}).
 
@@ -272,6 +281,7 @@ Your task in a single turn is to generate a structured response containing three
    - If the observation (O_{{i-1}}) was not useful or was an error, you should still state that and return the *previous* report content unchanged or with minimal updates.
    - This block will be the *only* memory (besides the original question) carried forward to the next round.
    - The report should be in the same language as the question.
+   - **For simple greetings**, you can briefly note this is a social interaction without extensive reporting.
 
 **3. `<tool_call>`, `<answer>`, or `<terminate>` Block (Action):**
    - Based on your `<plan>` and your *newly updated* `<report>`, decide the next step.

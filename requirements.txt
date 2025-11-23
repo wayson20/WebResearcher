@@ -10,3 +10,5 @@ tabulate
 pillow
 sandbox-fusion
 python-dotenv
+fastapi
+uvicorn

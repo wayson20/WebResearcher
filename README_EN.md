@@ -21,7 +21,8 @@
 - 🛠️ **Rich Tool Ecosystem**: Web search, academic papers, code execution, file parsing
 - 🎯 **Production Ready**: Zero external agent framework dependencies, fully self-contained
 - ⚡ **High Performance**: Async-first design, smart token management, robust error handling
-- 🎨 **Easy to Use**: Simple CLI, clean Python API, extensive examples
+- 🎨 **Easy to Use**: Simple CLI, clean Python API, modern WebUI, extensive examples
+- 📱 **Cross-Platform**: Perfect desktop and mobile support with responsive design
 
 ## 📖 Introduction
 
@@ -107,7 +108,29 @@ Round i:
 pip install webresearcher
 ```
 
-### Basic Usage
+### WebUI (Recommended)
+
+WebResearcher provides a modern web interface with desktop and mobile support:
+
+```bash
+# Start WebUI service
+cd webui
+python main.py
+
+# Access at http://localhost:8000
+```
+
+**WebUI Features:**
+- 🎨 **Modern Interface**: Clean conversational UI
+- 📱 **Mobile Optimized**: Perfect support for phones and tablets
+- 🔄 **Real-time Streaming**: Live visualization of research process
+- 📚 **History Management**: Save, edit, and delete sessions
+- 🎯 **Process Visualization**: Step-by-step display of plans, reports, and tool calls
+- ⚙️ **Flexible Configuration**: Custom instructions and tool selection
+
+See [WebUI Documentation](./webui/README.md) for details.
+
+### CLI Basic Usage
 
 ```bash
 # Set your API keys

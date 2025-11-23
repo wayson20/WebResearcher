@@ -10,8 +10,9 @@ import asyncio
 import random
 import time
 
-from typing import Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from openai import OpenAI, APIError, APIConnectionError, APITimeoutError
+import inspect
 import sys
 sys.path.append('..')
 from webresearcher.base import Message, build_text_completion_prompt, count_tokens as count_tokens_base
@@ -292,7 +293,7 @@ class WebResearcherAgent:
             logger.error(f"Tool call parsing or execution failed: {e}")
             return f"Error: Tool call failed. Input: {tool_call_str}. Error: {e}"
 
-    async def run(self, question):
+    async def run(self, question, progress_callback: Optional[Callable[[Dict[str, Any]], Any]] = None):
         """
         严格按照 IterResearch 范式执行研究（单 LLM 调用）。
         
@@ -307,6 +308,18 @@ class WebResearcherAgent:
             s_{t+1} = (Q, R_i, O_i)
             LOOP
         """
+
+        async def emit(event: Dict[str, Any]):
+            if not callable(progress_callback):
+                return
+            event.setdefault("timestamp", datetime.datetime.utcnow().isoformat())
+            try:
+                maybe = progress_callback(event)
+                if inspect.isawaitable(maybe):
+                    await maybe
+            except Exception as callback_err:
+                logger.warning(f"progress_callback raised error: {callback_err}")
+
         start_time = time.time()
 
         # 1. 初始化研究轮次
@@ -383,6 +396,16 @@ class WebResearcherAgent:
             if terminate_flag:
                 logger.debug(f"Round {round_num} - Terminate signaled. Reason: {terminate_reason}")
 
+            await emit({
+                "type": "round",
+                "round": round_num,
+                "plan": plan_content,
+                "report": report_content,
+                "action": action_content,
+                "answer": answer_content,
+                "terminate": terminate_flag,
+            })
+
             # 5. 状态更新 (s_t -> s_{t+1})
 
             # 5.1 更新报告 (R_i)
@@ -400,6 +423,13 @@ class WebResearcherAgent:
                 termination = 'answer found'
                 if terminate_flag:
                     termination = 'terminate with answer'
+                await emit({
+                    "type": "final",
+                    "round": round_num,
+                    "answer": prediction,
+                    "report": research_round.current_report,
+                    "termination": termination,
+                })
                 logger.debug(f"Round {round_num}: LLM provided <answer>. Terminating loop.")
                 break
             if terminate_flag:
@@ -408,6 +438,13 @@ class WebResearcherAgent:
                 else:
                     prediction = research_round.current_report.strip()
                 termination = 'terminated by llm'
+                await emit({
+                    "type": "final",
+                    "round": round_num,
+                    "answer": prediction,
+                    "report": research_round.current_report,
+                    "termination": termination,
+                })
                 logger.debug(f"Round {round_num}: LLM signaled <terminate>. Final response prepared.")
                 break
             if 'is_last_call' in locals() and is_last_call:
@@ -415,6 +452,13 @@ class WebResearcherAgent:
                 fallback_source = fallback_report or terminate_reason
                 prediction = fallback_source if fallback_source else research_round.last_observation
                 termination = 'finalized without answer tag'
+                await emit({
+                    "type": "final",
+                    "round": round_num,
+                    "answer": prediction,
+                    "report": research_round.current_report,
+                    "termination": termination,
+                })
                 logger.warning("Last LLM call did not return <answer> or <terminate>. Promoting accumulated content as final answer.")
                 break
 
@@ -426,6 +470,12 @@ class WebResearcherAgent:
 
                     # 将工具响应 O_i 存储，用于下一轮 s_{t+1}
                     research_round.last_observation = tool_response_str
+                    await emit({
+                        "type": "tool",
+                        "round": round_num,
+                        "tool_call": action_content,
+                        "observation": tool_response_str,
+                    })
 
                     # 记录工具响应到完整日志
                     tool_obs_msg = f"{OBS_START}\n{tool_response_str}\n{OBS_END}"
@@ -437,6 +487,12 @@ class WebResearcherAgent:
                     logger.error(f"Error calling tool: {e}")
                     error_str = f"Error executing tool: {e}"
                     research_round.last_observation = error_str
+                    await emit({
+                        "type": "tool_error",
+                        "round": round_num,
+                        "tool_call": action_content,
+                        "observation": error_str,
+                    })
                     full_trajectory_log.append({"role": "user", "content": f"{OBS_START}\n{error_str}\n{OBS_END}"})
             else:
                 # LLM 既没有回答也没有调用工具
@@ -459,6 +515,13 @@ class WebResearcherAgent:
                     if forced_parsed["answer"]:
                         prediction = forced_parsed["answer"]
                         termination = "answer (forced)"
+                        await emit({
+                            "type": "final",
+                            "round": round_num,
+                            "answer": prediction,
+                            "report": research_round.current_report,
+                            "termination": termination,
+                        })
                         full_trajectory_log.append({"role": "assistant", "content": forced_content})
                         break
                     else:
@@ -488,6 +551,13 @@ class WebResearcherAgent:
                 parsed = self.parse_output(content)
                 prediction = parsed["answer"] if parsed["answer"] else "No answer found (token limit)."
                 termination = 'token limit reached'
+                await emit({
+                    "type": "final",
+                    "round": round_num,
+                    "answer": prediction,
+                    "report": research_round.current_report,
+                    "termination": termination,
+                })
                 full_trajectory_log.append({"role": "assistant", "content": content})
                 break
 
@@ -513,6 +583,14 @@ class WebResearcherAgent:
             "termination": termination,
             "trajectory": full_trajectory_log,
         }
+
+        await emit({
+            "type": "status",
+            "status": termination or 'completed',
+            "answer": prediction,
+            "report": research_round.current_report,
+        })
+
         return result
 
 

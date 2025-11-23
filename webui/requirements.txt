@@ -1,0 +1,4 @@
+webresearcher
+fastapi
+uvicorn
+pydantic
