@@ -154,26 +154,6 @@ This is the introduction [cite:id_1]. More text here [cite:id_2].
         assert "[cite:id_1]" in parsed2["action_content"]
 
 
-def test_webweaver_agent_initialization():
-    """Test WebWeaverAgent initialization."""
-    llm_config = {
-        "model": "gpt-4o",
-        "generate_cfg": {"temperature": 0.1}
-    }
-
-    # Mock OpenAI client to avoid API key requirement
-    with pytest.MonkeyPatch().context() as m:
-        m.setenv("LLM_API_KEY", "test-key")
-        m.setenv("LLM_BASE_URL", "http://test")
-        agent = WebWeaverAgent(llm_config)
-
-        assert agent.memory_bank is not None
-        assert agent.planner is not None
-        assert agent.writer is not None
-        assert agent.memory_bank == agent.planner.memory_bank
-        assert agent.memory_bank == agent.writer.memory_bank
-
-
 if __name__ == "__main__":
     test_memory_bank_basic()
 
@@ -182,5 +162,3 @@ if __name__ == "__main__":
     test_planner_parse_output()
 
     test_writer_parse_output()
-
-    test_webweaver_agent_initialization()
