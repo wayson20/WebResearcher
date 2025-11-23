@@ -4,10 +4,13 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from dotenv import load_dotenv
 import sys
 sys.path.append("../../")
+load_dotenv()
 from webresearcher.log import logger
 from webresearcher.web_researcher_agent import WebResearcherAgent
+
 
 
 class ConversationTurn:
@@ -192,13 +195,20 @@ class SessionState:
         # 只取最近的 max_turns 轮对话
         recent_turns = completed_turns[-max_turns:] if len(completed_turns) > max_turns else completed_turns
         
-        context_parts = [f"## Previous Conversation History (Recent {len(recent_turns)} rounds):"]
-        for idx, turn in enumerate(recent_turns, 1):
-            context_parts.append(f"\n### Round {idx}")
-            context_parts.append(f"**Question:** {turn.question}")
-            context_parts.append(f"**Answer:** {turn.answer}")
+        context_parts = [
+            "## Previous Conversation History",
+            f"The following are the previous {len(recent_turns)} round(s) of conversation in this session.",
+            "You should use this information to understand the context and provide better answers for the current question.",
+            "DO NOT repeat information from previous answers unless specifically asked.",
+            ""
+        ]
         
-        context_parts.append("\n---\n")
+        for idx, turn in enumerate(recent_turns, 1):
+            context_parts.append(f"### Previous Round {idx}")
+            context_parts.append(f"User Question: {turn.question}")
+            context_parts.append(f"Your Answer: {turn.answer}")
+            context_parts.append("")
+        
         return "\n".join(context_parts)
     
     def to_dict(self, include_events: bool = True, include_process: bool = True) -> Dict[str, Any]:
@@ -340,16 +350,25 @@ class SessionManager:
         # 添加新的轮次
         turn = await session.add_turn(question)
         
-        # 构建完整的问题（包含历史上下文）
+        # 构建历史对话上下文
         history_context = session.get_history_context()
-        full_question = question
-        if history_context:
-            # 在系统指令中加入历史上下文
-            enhanced_instruction = f"{history_context}\n\n{session.instruction}".strip()
-        else:
-            enhanced_instruction = session.instruction
         
-        logger.info(f"Starting research for session {session.id} with question: {question}, enhanced instruction: {enhanced_instruction}, tools: {session.tools}")
+        # 关键修复：将历史上下文添加到 instruction 中
+        # 这样可以让 agent 在 system prompt 中看到历史对话
+        enhanced_instruction = session.instruction
+        if history_context:
+            enhanced_instruction = f"{session.instruction}\n\n{history_context}".strip()
+        
+        # 当前问题（不附加历史）
+        current_question = question
+        
+        logger.info(f"Starting research for session {session.id}, turn {len(session.turns)}")
+        logger.debug(f"Current question: {question}")
+        logger.debug(f"Has history: {bool(history_context)}")
+        if history_context:
+            logger.debug(f"History context preview: {history_context[:200]}...")
+        
+        # 创建独立的 agent 实例，使用增强的 instruction
         agent = WebResearcherAgent(
             instruction=enhanced_instruction,
             function_list=session.tools if session.tools else None,
@@ -359,7 +378,8 @@ class SessionManager:
             await session.add_event(event)
         
         try:
-            result = await agent.run(full_question, progress_callback=progress)
+            # 执行研究，使用当前问题
+            result = await agent.run(current_question, progress_callback=progress)
             
             answer = result.get("prediction", "")
             
@@ -373,6 +393,7 @@ class SessionManager:
                 })
             
             await session.finish_turn(answer=answer, result=result)
+            logger.info(f"Research completed for session {session.id}, turn {len(session.turns)}")
             
         except Exception as exc:
             error_msg = str(exc)
