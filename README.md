@@ -121,6 +121,8 @@ python main.py
 # 访问 http://localhost:8000
 ```
 
+<img src="https://github.com/shibing624/WebResearcher/blob/main/docs/webui-snap.png" alt="webui" width="100%"/>
+
 **WebUI 特性：**
 - 🎨 **现代化界面**: 简洁优雅的对话式界面
 - 📱 **移动端适配**: 完美支持手机和平板访问

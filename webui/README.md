@@ -3,7 +3,7 @@
 现代化的 Web 用户界面，为 WebResearcher 提供直观的交互体验。
 
 <p align="center">
-  <img src="../docs/webui-screenshot.png" alt="WebUI Screenshot" width="800"/>
+  <img src="../docs/webui-snap.png" alt="WebUI Screenshot" width="800"/>
 </p>
 
 ## ✨ 特性
@@ -72,73 +72,6 @@ python main.py
 
 在浏览器中打开 `http://localhost:8000`，开始使用！
 
-## 📖 使用指南
-
-### 桌面端操作
-
-1. **开始研究**
-   - 在底部输入框输入问题
-   - 按 `Ctrl+Enter`（Mac: `Cmd+Enter`）发送
-   - `Enter` 键换行
-
-2. **查看研究过程**
-   - 右侧面板实时显示研究过程
-   - 包括计划、报告、工具调用
-   - 点击卡片可展开/收起详细内容
-
-3. **历史记录**
-   - 左侧面板显示所有会话
-   - 点击会话可重新加载
-   - 悬停显示编辑和删除按钮
-
-4. **中止研究**
-   - 研究进行中，发送按钮变为中止按钮
-   - 点击即可停止当前研究
-
-### 移动端操作
-
-1. **打开侧边栏**
-   - 点击左上角 **☰** 打开历史记录
-   - 点击右上角 **📋** 打开研究过程
-
-2. **关闭侧边栏**
-   - 点击遮罩层
-   - 选择历史记录后自动关闭
-
-3. **输入问题**
-   - 底部输入框与桌面端相同
-   - 支持 `Ctrl+Enter` 发送
-
-## 🏗️ 架构
-
-### 技术栈
-
-**后端：**
-- FastAPI - 现代异步 Web 框架
-- SSE（Server-Sent Events）- 实时流式数据传输
-- Python 异步 I/O
-
-**前端：**
-- 原生 JavaScript（ES6+）
-- Tailwind CSS - 实用优先的 CSS 框架
-- 无依赖，纯前端实现
-
-### 目录结构
-
-```
-webui/
-├── main.py                 # FastAPI 应用入口
-├── api/
-│   ├── routes.py          # API 路由定义
-│   └── session_manager.py # 会话管理
-├── static/
-│   ├── index.html         # 主页面
-│   ├── app.js            # 前端逻辑
-│   └── favicon.svg       # 图标
-└── data/
-    └── history.jsonl     # 历史记录存储
-```
-
 ### API 端点
 
 #### 会话管理
@@ -172,38 +105,6 @@ webui/
       }
     }
   ]
-}
-```
-
-## 🎨 界面定制
-
-### 主题颜色
-
-在 `static/index.html` 中修改 CSS 变量：
-
-```css
-:root {
-  --primary-color: #000000;
-  --hover-color: #374151;
-  --border-color: #e5e7eb;
-}
-```
-
-### 字体大小
-
-在 `static/index.html` 的 `<style>` 标签中调整：
-
-```css
-.user-message {
-  font-size: 1.0625rem;  /* 用户消息 */
-}
-
-.assistant-message {
-  font-size: 1.0625rem;  /* AI 回答 */
-}
-
-.process-card {
-  font-size: 1rem;       /* 研究过程 */
 }
 ```
 
@@ -241,49 +142,6 @@ python main.py --host 0.0.0.0
 # 开发模式（自动重载）
 uvicorn main:app --reload --port 8000
 ```
-
-## 📱 移动端适配详情
-
-### 响应式断点
-- 桌面端：> 768px
-- 移动端：≤ 768px
-
-### 移动端优化
-1. **侧边栏**：从固定布局改为抽屉式
-2. **字体**：自动缩小以适应小屏幕
-3. **按钮**：保持 44px 最小触摸尺寸
-4. **输入框**：自适应键盘弹出
-
-### 浏览器兼容性
-- ✅ Chrome 80+
-- ✅ Safari 12+
-- ✅ Firefox 68+
-- ✅ Edge 79+
-- ✅ 移动端浏览器
-
-## 🐛 故障排除
-
-### 常见问题
-
-**Q: 页面加载不出来？**
-- 检查是否正确启动了服务
-- 确认端口 8000 没有被占用
-- 查看浏览器控制台的错误信息
-
-**Q: 研究没有响应？**
-- 确认环境变量已正确设置
-- 检查 API 密钥是否有效
-- 查看后端日志输出
-
-**Q: 移动端侧边栏无法打开？**
-- 刷新页面重试
-- 检查浏览器控制台错误
-- 确认使用的是现代浏览器
-
-**Q: 历史记录丢失？**
-- 检查 `data/history.jsonl` 文件是否存在
-- 确认文件权限正确
-- 备份该文件以防数据丢失
 
 ## 🚀 部署
 
@@ -331,8 +189,3 @@ location / {
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
-
----
-
-**更新日期**: 2025-11-23  
-**版本**: 1.0.0

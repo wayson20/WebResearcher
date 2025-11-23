@@ -120,6 +120,8 @@ python main.py
 # Access at http://localhost:8000
 ```
 
+<img src="https://github.com/shibing624/WebResearcher/blob/main/docs/webui-snap.png" alt="webui" width="100%"/>
+
 **WebUI Features:**
 - 🎨 **Modern Interface**: Clean conversational UI
 - 📱 **Mobile Optimized**: Perfect support for phones and tablets
