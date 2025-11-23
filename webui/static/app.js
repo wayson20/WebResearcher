@@ -1200,4 +1200,17 @@ autoResizeTextarea(questionInput);
 if (state.isMobile) {
   state.sidebarCollapsed = true;
   state.processCollapsed = true;
+} else {
+  // 桌面端初始化：设置按钮的初始箭头方向
+  // 历史记录侧边栏初始是展开的（sidebarCollapsed = false），所以箭头应该向左（表示可以隐藏）
+  if (showSidebarBtn) {
+    showSidebarBtn.querySelector("svg path").setAttribute("d", "M15 19l-7-7 7-7");
+    showSidebarBtn.title = "隐藏历史记录";
+  }
+  
+  // 研究过程侧边栏初始也是展开的（processCollapsed = false），所以箭头应该向右（表示可以隐藏）
+  if (processIcon) {
+    processIcon.querySelector("path").setAttribute("d", "M9 5l7 7-7 7");
+    toggleProcessBtn.title = "隐藏研究过程";
+  }
 }
