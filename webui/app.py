@@ -2,6 +2,7 @@
 """
 WebResearcher Web UI - FastAPI Application Entry
 """
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -9,7 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from .api.routes import api_router
+sys.path.append('..')
+from webui.api.routes import api_router
 
 # 目录配置
 BASE_DIR = Path(__file__).resolve().parent

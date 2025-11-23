@@ -63,7 +63,7 @@ export LLM_MODEL_NAME="gpt-4o"
 ### 3. 启动服务
 
 ```bash
-python main.py
+python app.py
 ```
 
 默认运行在 `http://localhost:8000`
@@ -133,14 +133,7 @@ FILE_DIR=./files              # 文件目录
 ### 启动参数
 
 ```bash
-# 自定义端口
-python main.py --port 8080
-
-# 监听所有网卡
-python main.py --host 0.0.0.0
-
-# 开发模式（自动重载）
-uvicorn main:app --reload --port 8000
+python app.py
 ```
 
 ## 🚀 部署
@@ -169,7 +162,7 @@ docker run -d \
 pip install gunicorn
 
 # 启动应用
-gunicorn main:app \
+gunicorn app:app \
   -w 4 \
   -k uvicorn.workers.UvicornWorker \
   -b 127.0.0.1:8000

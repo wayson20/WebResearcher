@@ -115,7 +115,7 @@ WebResearcher provides a modern web interface with desktop and mobile support:
 ```bash
 # Start WebUI service
 cd webui
-python main.py
+python app.py
 
 # Access at http://localhost:8000
 ```

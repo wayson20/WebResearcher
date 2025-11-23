@@ -116,7 +116,7 @@ WebResearcher 提供了现代化的 Web 界面，支持桌面端和移动端：
 ```bash
 # 启动 WebUI 服务
 cd webui
-python main.py
+python3 app.py
 
 # 访问 http://localhost:8000
 ```
