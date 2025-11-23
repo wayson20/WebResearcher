@@ -230,9 +230,9 @@ class WebResearcherAgent:
         return "LLM server error."
 
     def count_tokens(self, messages, model=None):
-        if model is None:
-            model = LLM_MODEL_NAME
         """Count tokens in messages"""
+        if model is None:
+            model = self.model or "gpt-4o"  # 使用实例的 model 或默认值
         try:
             # Convert dict messages to Message objects if needed
             full_message = []
