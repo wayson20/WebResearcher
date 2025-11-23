@@ -56,6 +56,7 @@ class ReactAgent:
         instruction: str = "",
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> None:
         llm_config = dict(llm_config or {})
         if api_key:
@@ -64,7 +65,7 @@ class ReactAgent:
             llm_config["base_url"] = base_url
 
         self.llm_config = llm_config
-        self.model = self.llm_config.get("model", LLM_MODEL_NAME)
+        self.model = model or self.llm_config.get("model", LLM_MODEL_NAME)
         self.generate_cfg = self.llm_config.get("generate_cfg", {"temperature": 0.6, "top_p": 0.95})
         self.api_key = self.llm_config.get("api_key", LLM_API_KEY)
         self.base_url = self.llm_config.get("base_url", LLM_BASE_URL)

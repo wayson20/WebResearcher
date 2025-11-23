@@ -105,6 +105,7 @@ class WebResearcherAgent:
             instruction: str = "",
             api_key: Optional[str] = None,
             base_url: Optional[str] = None,
+            model: Optional[str] = None,
     ):
         llm_config = dict(llm_config or {})
         if api_key:
@@ -114,7 +115,7 @@ class WebResearcherAgent:
 
         self.llm_config = llm_config
         self.llm_generate_cfg = self.llm_config.get("generate_cfg", {})
-        self.model = self.llm_config.get("model", LLM_MODEL_NAME)  # 主模型
+        self.model = model or self.llm_config.get("model", LLM_MODEL_NAME)  # 主模型
         self.api_key = self.llm_config.get("api_key", LLM_API_KEY)
         self.base_url = self.llm_config.get("base_url", LLM_BASE_URL)
         self.max_input_tokens = self.llm_config.get("max_input_tokens", 32000)

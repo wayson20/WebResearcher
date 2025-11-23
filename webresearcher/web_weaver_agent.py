@@ -565,6 +565,7 @@ class WebWeaverAgent:
             instruction: str = "",
             api_key: Optional[str] = None,
             base_url: Optional[str] = None,
+            model: Optional[str] = None,
     ):
         """
         Initialize WebWeaver agent.
@@ -586,6 +587,8 @@ class WebWeaverAgent:
             self.llm_config["api_key"] = api_key
         if base_url:
             self.llm_config["base_url"] = base_url
+        if model:
+            self.llm_config["model"] = model
         
         # Initialize shared memory bank
         self.memory_bank = MemoryBank()

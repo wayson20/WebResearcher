@@ -11,7 +11,7 @@ from pathlib import Path
 # LLM api key
 LLM_API_KEY = os.getenv("LLM_API_KEY")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL")
-LLM_MODEL_NAME = os.getenv('LLM_MODEL_NAME', 'gpt-4o')
+LLM_MODEL_NAME = os.getenv('LLM_MODEL_NAME')
 # google search api key
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
 # url page reader api key
