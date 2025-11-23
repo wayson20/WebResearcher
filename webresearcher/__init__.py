@@ -12,7 +12,6 @@ __email__ = "xuming624@qq.com"
 __url__ = "https://github.com/shibing624/WebResearcher"
 __license__ = "Apache-2.0"
 
-# Core components
 from webresearcher.base import (
     Message,
     MessageRole,
