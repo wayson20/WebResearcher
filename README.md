@@ -162,7 +162,6 @@ llm_config = {
 agent = WebResearcherAgent(
     llm_config=llm_config,
     function_list=["search", "google_scholar", "python"],
-    base_url="https://api.openai.com/v1"  # 可选
 )
 
 # 开始研究
@@ -193,7 +192,6 @@ llm_config = {
 agent = ReactAgent(
     llm_config=llm_config,
     function_list=["search", "google_scholar", "visit", "python"],
-    base_url="https://api.openai.com/v1"  # 可选
 )
 
 async def main():
