@@ -12,3 +12,6 @@ sandbox-fusion
 python-dotenv
 fastapi
 uvicorn
+beautifulsoup4
+markdownify
+httpx

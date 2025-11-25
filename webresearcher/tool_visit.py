@@ -5,6 +5,11 @@ from webresearcher.base import BaseTool
 from openai import OpenAI
 import time
 import tiktoken
+import re
+import asyncio
+import httpx
+from bs4 import BeautifulSoup
+from markdownify import MarkdownConverter
 from webresearcher.prompt import get_extractor_prompt
 from webresearcher.log import logger
 from webresearcher.config import (
@@ -25,6 +30,62 @@ def truncate_to_tokens(text: str, max_tokens: int = 95000) -> str:
     
     truncated_tokens = tokens[:max_tokens]
     return encoding.decode(truncated_tokens)
+
+
+def extract_readable_text(html: str) -> str:
+    """Convert raw HTML into plain text."""
+    soup = BeautifulSoup(html, "html.parser")
+    for element in soup(["script", "style", "noscript"]):
+        element.decompose()
+
+    text = soup.get_text(separator="\n")
+    cleaned_lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return "\n".join(cleaned_lines)
+
+
+def parse_html_to_markdown(html: str, url: str) -> str:
+    """Parse HTML to markdown format.
+    
+    Args:
+        html: HTML content to convert
+        url: Source URL (used for special handling of Wikipedia pages)
+        
+    Returns:
+        Markdown formatted text
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    title = soup.title.string if soup.title else "No Title"
+    
+    # Remove javascript, style blocks, and hyperlinks
+    for element in soup(["script", "style", "noscript"]):
+        element.decompose()
+    
+    # Remove other common irrelevant elements
+    for element in soup.find_all(["nav", "footer", "aside", "form", "figure", "header"]):
+        element.decompose()
+    
+    # Special handling for Wikipedia pages
+    if "wikipedia.org" in url:
+        body_elm = soup.find("div", {"id": "mw-content-text"})
+        title_elm = soup.find("span", {"class": "mw-page-title-main"})
+        
+        if body_elm:
+            main_title = title_elm.string if title_elm else title
+            webpage_text = f"# {main_title}\n\n" + MarkdownConverter().convert_soup(body_elm)
+        else:
+            webpage_text = MarkdownConverter().convert_soup(soup)
+    else:
+        webpage_text = MarkdownConverter().convert_soup(soup)
+    
+    # Clean up excessive newlines
+    webpage_text = re.sub(r"\r\n", "\n", webpage_text)
+    webpage_text = re.sub(r"\n{2,}", "\n\n", webpage_text).strip()
+    
+    # Add title if not already present
+    if not webpage_text.startswith("# "):
+        webpage_text = f"# {title}\n\n{webpage_text}"
+    
+    return webpage_text
 
 OSS_JSON_FORMAT = """# Response Formats
 ## visit_content
@@ -125,12 +186,16 @@ class Visit(BaseTool):
         
         Args:
             url: The URL to read
-            goal: The goal/purpose of reading the page
             
         Returns:
             str: The webpage content or error message
         """
-        max_retries = 3
+        # Check if Jina API key is available
+        if not JINA_API_KEY or JINA_API_KEY.strip() == "":
+            logger.debug(f"[visit] Jina API key not configured, falling back to local fetch")
+            return self.local_fetch_url(url)
+        
+        max_retries = 1  # 减少重试次数从 2 到 1
         timeout = 50
         
         for attempt in range(max_retries):
@@ -148,19 +213,72 @@ class Visit(BaseTool):
                     return webpage_content
                 else:
                     logger.debug(f"Jina API error response: {response.text}")
+                    if attempt == max_retries - 1:
+                        # 最后一次失败，降级到本地抓取
+                        logger.debug(f"[visit] Jina API failed, falling back to local fetch")
+                        return self.local_fetch_url(url)
                     raise ValueError("jina readpage error")
             except Exception as e:
+                logger.debug(f"[visit] Jina fetch attempt {attempt + 1} failed: {e}")
                 time.sleep(0.5)
                 if attempt == max_retries - 1:
-                    return "[visit] Failed to read page."
+                    # 最后一次失败，降级到本地抓取
+                    logger.debug(f"[visit] Jina API failed, falling back to local fetch")
+                    return self.local_fetch_url(url)
                 
         return "[visit] Failed to read page."
+    
+    def local_fetch_url(self, url: str) -> str:
+        """
+        Fallback method: Fetch URL content locally without Jina.
+        
+        Args:
+            url: The URL to fetch
+            
+        Returns:
+            str: Markdown formatted webpage content or error message
+        """
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (compatible; URLCrawler/1.0; +https://example.com/bot)",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
+            }
+            
+            logger.debug(f"[visit] Local fetching URL: {url}")
+            response = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+            response.raise_for_status()
+            
+            # Check content type
+            content_type = response.headers.get("content-type", "").lower()
+            allowed_keywords = ("text", "html", "xml")
+            if not any(keyword in content_type for keyword in allowed_keywords):
+                logger.warning(f"[visit] Unsupported content type: {content_type}")
+                return f"[visit] Unsupported content type: {content_type}"
+            
+            # Decode content
+            html_content = response.content.decode(response.encoding or "utf-8", errors="replace")
+            
+            # Convert to markdown
+            markdown_content = parse_html_to_markdown(html_content, url)
+            logger.debug(f"[visit] Local fetch successful, content length: {len(markdown_content)}")
+            return markdown_content
+            
+        except requests.exceptions.Timeout:
+            logger.warning(f"[visit] Timeout while fetching {url}")
+            return f"[visit] Timeout while fetching {url}"
+        except requests.exceptions.HTTPError as e:
+            logger.warning(f"[visit] HTTP error while fetching {url}: {e}")
+            return f"[visit] HTTP error: {e}"
+        except Exception as e:
+            logger.warning(f"[visit] Failed to fetch {url}: {e}")
+            return f"[visit] Failed to fetch page: {e}"
 
     def html_readpage_jina(self, url: str) -> str:
-        max_attempts = 8
+        max_attempts = 1  # 减少重试次数从 2 到 1
         for attempt in range(max_attempts):
             content = self.jina_readpage(url)
-            service = "jina"     
+            service = "jina or local"     
             logger.debug(f"Using service: {service}")
             if content and not content.startswith("[visit] Failed to read page.") and content != "[visit] Empty content." and not content.startswith("[document_parser]"):
                 return content
@@ -189,7 +307,7 @@ class Visit(BaseTool):
             messages = [{"role":"user","content": extractor_prompt_template.format(webpage_content=content, goal=goal)}]
             parse_retry_times = 0
             raw = summary_page_func(messages, max_retries=max_retries)
-            summary_retries = 3
+            summary_retries = 1
             while len(raw) < 10 and summary_retries >= 0:
                 truncate_length = int(0.7 * len(content)) if summary_retries > 0 else 25000
                 status_msg = (
@@ -212,7 +330,7 @@ class Visit(BaseTool):
                 raw = summary_page_func(messages, max_retries=max_retries)
                 summary_retries -= 1
 
-            parse_retry_times = 2
+            parse_retry_times = 1
             if isinstance(raw, str):
                 raw = raw.replace("```json", "").replace("```", "").strip()
             while parse_retry_times < 3:

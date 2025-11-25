@@ -11,7 +11,7 @@ from webresearcher.config import SERPER_API_KEY
 
 class Scholar(BaseTool):
     name = "google_scholar"
-    description = "Leverage Google Scholar to retrieve relevant information from academic publications. Accepts multiple queries."
+    description = "Leverage Google Scholar to retrieve relevant information from academic publications. Accepts multiple queries. max 5 queries."
     parameters = {
         "type": "object",
         "properties": {
@@ -19,7 +19,7 @@ class Scholar(BaseTool):
                 "type": "array",
                 "items": {"type": "string", "description": "The search query."},
                 "minItems": 1,
-                "description": "The list of search queries for Google Scholar."
+                "description": "The list of search queries for Google Scholar. max 5 queries."
             },
         },
         "required": ["query"],

@@ -120,7 +120,7 @@ class WebResearcherAgent:
         self.base_url = self.llm_config.get("base_url", LLM_BASE_URL)
         self.max_input_tokens = self.llm_config.get("max_input_tokens", 32000)
         self.llm_timeout = self.llm_config.get("llm_timeout", 300.0)
-        self.agent_timeout = self.llm_config.get("agent_timeout", 600.0)
+        self.agent_timeout = self.llm_config.get("agent_timeout", 1800.0)
         self.function_list = function_list or list(TOOL_MAP.keys())
         self.instruction = instruction
 

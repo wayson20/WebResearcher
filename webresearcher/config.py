@@ -27,7 +27,7 @@ SANDBOX_FUSION_ENDPOINTS = [
 
 # ==================== Agent Configuration ====================
 MAX_LLM_CALL_PER_RUN = int(os.getenv('MAX_LLM_CALL_PER_RUN', 100))
-AGENT_TIMEOUT = int(os.getenv('AGENT_TIMEOUT', 600))
+AGENT_TIMEOUT = int(os.getenv('AGENT_TIMEOUT', 1800))
 FILE_DIR = os.getenv('FILE_DIR', './files')
 
 # ==================== Visit Tool Configuration ====================

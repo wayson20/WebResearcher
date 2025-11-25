@@ -41,7 +41,7 @@ class PlannerSearchTool(BaseTool):
                 "query": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Array of search query strings. Include multiple complementary search queries in a single call."
+                    "description": "Array of search query strings. Include multiple complementary search queries in a single call. max 5 queries."
                 },
             },
             "required": ["query"]

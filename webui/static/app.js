@@ -132,10 +132,24 @@ const parseTools = (value = "") =>
     .map((token) => token.trim())
     .filter((token) => token.length);
 
-// 自动调整文本框高度
+// 自动调整文本框高度（避免单行时出现滚动条）
 const autoResizeTextarea = (textarea) => {
   textarea.style.height = 'auto';
-  textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+  const scrollHeight = textarea.scrollHeight;
+  const lineHeight = 24; // 与 CSS 中的 line-height 一致
+  
+  // 计算实际需要的高度
+  const newHeight = Math.min(scrollHeight, 200);
+  
+  // 只有当内容高度大于单行高度时才设置 height
+  if (scrollHeight > lineHeight) {
+    textarea.style.height = newHeight + 'px';
+  } else {
+    textarea.style.height = lineHeight + 'px';
+  }
+  
+  // 控制 overflow-y
+  textarea.style.overflowY = scrollHeight > 200 ? 'auto' : 'hidden';
 };
 
 // 检测是否为移动端

@@ -10,7 +10,7 @@ logger.debug(f"SERPER_API_KEY: {SERPER_API_KEY}")
 
 class Search(BaseTool):
     name = "search"
-    description = "Performs batched web searches: supply an array 'query'; the tool retrieves the top 10 results for each query in one call."
+    description = "Performs batched web searches: supply an array 'query'; the tool retrieves the top 10 results for each query in one call. max 5 queries."
     parameters = {
         "type": "object",
         "properties": {
@@ -19,7 +19,7 @@ class Search(BaseTool):
                 "items": {
                     "type": "string"
                 },
-                "description": "Array of query strings. Include multiple complementary search queries in a single call."
+                "description": "Array of query strings. Include multiple complementary search queries in a single call. max 5 queries."
             },
         },
         "required": ["query"],
