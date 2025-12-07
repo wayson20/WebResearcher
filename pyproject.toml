@@ -43,6 +43,10 @@ dependencies = [
     "sandbox-fusion",
     "python-dotenv",
     "beautifulsoup4",
+    "fastapi",
+    "uvicorn",
+    "markdownify",
+    "httpx",
 ]
 
 [project.optional-dependencies]
@@ -68,7 +72,7 @@ Repository = "https://github.com/shibing624/WebResearcher"
 webresearcher = "webresearcher.cli:main"
 
 [tool.setuptools]
-packages = ["webresearcher", "webresearcher.file_tools"]
+packages = ["webresearcher", "webresearcher.file_tools", "webui", "webui.api"]
 
 [tool.setuptools.dynamic]
 version = {attr = "webresearcher.__version__"}
