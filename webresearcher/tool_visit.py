@@ -6,9 +6,6 @@ from openai import OpenAI
 import time
 import tiktoken
 import re
-import asyncio
-import httpx
-from bs4 import BeautifulSoup
 from markdownify import MarkdownConverter
 from webresearcher.prompt import get_extractor_prompt
 from webresearcher.log import logger
@@ -34,6 +31,8 @@ def truncate_to_tokens(text: str, max_tokens: int = 95000) -> str:
 
 def extract_readable_text(html: str) -> str:
     """Convert raw HTML into plain text."""
+    from bs4 import BeautifulSoup
+
     soup = BeautifulSoup(html, "html.parser")
     for element in soup(["script", "style", "noscript"]):
         element.decompose()
@@ -53,6 +52,8 @@ def parse_html_to_markdown(html: str, url: str) -> str:
     Returns:
         Markdown formatted text
     """
+    from bs4 import BeautifulSoup
+    
     soup = BeautifulSoup(html, "html.parser")
     title = soup.title.string if soup.title else "No Title"
     
