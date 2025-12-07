@@ -72,7 +72,10 @@ Repository = "https://github.com/shibing624/WebResearcher"
 webresearcher = "webresearcher.cli:main"
 
 [tool.setuptools]
-packages = ["webresearcher", "webresearcher.file_tools", "webui", "webui.api"]
+packages = ["webresearcher", "webresearcher.file_tools", "webui", "webui.api", "webui.config"]
+
+[tool.setuptools.package-data]
+webui = ["static/*", "data/*", "*.md", "*.txt"]
 
 [tool.setuptools.dynamic]
 version = {attr = "webresearcher.__version__"}
