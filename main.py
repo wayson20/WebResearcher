@@ -199,7 +199,7 @@ Examples:
     )
     
     # Model configuration
-    parser.add_argument("--model", type=str, default="o3-mini",
+    parser.add_argument("--model", type=str, default="gpt-4o",
                         help="LLM model name")
     parser.add_argument("--temperature", type=float, default=0.6,
                         help="Sampling temperature")
