@@ -394,13 +394,13 @@ result = await agent.run("你的问题")
 ```bash
 # 必需
 LLM_API_KEY=...              # LLM API 密钥 (OpenAI/DeepSeek 等)
-SERPER_API_KEY=...                 # Serper API（Google 搜索）
 
 # 可选
 LLM_BASE_URL=https://...        # 自定义 LLM 端点, 或 DeepSeek base url
 LLM_MODEL_NAME=gpt-4o          # 默认模型名称
+SERPER_API_KEY=...                 # Serper API（Google 搜索，不填会降级到百度搜索）
 JINA_API_KEY=...                   # Jina AI（网页抓取）
-SANDBOX_FUSION_ENDPOINTS=...       # 代码执行沙盒
+SANDBOX_FUSION_ENDPOINTS=...       # 代码执行沙盒，不填会降级到本地执行
 MAX_LLM_CALL_PER_RUN=50           # 每次研究的最大迭代次数
 FILE_DIR=./files                   # 文件存储目录
 ```
@@ -411,7 +411,7 @@ FILE_DIR=./files                   # 文件存储目录
 llm_config = {
     "model": "deepseek-v3.1",              # 或: o3-mini, gpt-4-turbo 等
     "api_key": "your-api-key",             # 可选，默认从环境变量 LLM_API_KEY 读取
-    "base_url": "https://api.openai.com/v1",  # 可选，默认从环境变量 LLM_BASE_URL 读取
+    "base_url": "https://api.deepseek.com/v1",  # 可选，默认从环境变量 LLM_BASE_URL 读取
     "generate_cfg": {
         "temperature": 0.6,          # 采样温度 (0.0-2.0)
         "top_p": 0.95,              # 核采样

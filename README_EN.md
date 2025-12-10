@@ -140,7 +140,6 @@ See [WebUI Documentation](./webui/README.md) for details.
 ```bash
 # Set your API keys
 export LLM_API_KEY="your_key"
-export SERPER_API_KEY="your_key"
 
 # Run a research query
 webresearcher "Who won the Nobel Prize in Physics in 2024?"
@@ -200,7 +199,7 @@ llm_config = {
 # Function Calling mode (default)
 agent = ReactAgent(
     llm_config=llm_config,
-    function_list=["search", "google_scholar", "visit", "python"],
+    function_list=["search", "visit", "python"],
 )
 
 # Or use XML protocol mode (compatible with local LLMs)
@@ -401,13 +400,13 @@ Based on the paper's evaluation:
 ```bash
 # Required
 LLM_API_KEY=...              # LLM API key (OpenAI/DeepSeek etc.)
-SERPER_API_KEY=...                 # Serper API for Google Search
 
 # Optional
 LLM_BASE_URL=https://...        # Custom LLM endpoint, or deepseek base url
 LLM_MODEL_NAME=gpt-4o          # Default model name
+SERPER_API_KEY=...                 # Serper API for Google Search, not set use baidu search
 JINA_API_KEY=...                   # Jina AI for web scraping
-SANDBOX_FUSION_ENDPOINTS=...       # Code execution sandbox
+SANDBOX_FUSION_ENDPOINTS=...       # Code execution sandbox, not set use default local execution
 MAX_LLM_CALL_PER_RUN=50           # Max iterations per research
 FILE_DIR=./files                   # File storage directory
 ```
@@ -418,7 +417,7 @@ FILE_DIR=./files                   # File storage directory
 llm_config = {
     "model": "deepseek-v3.1",              # Or: o3-mini, gpt-4-turbo, etc.
     "api_key": "your-api-key",             # Optional, defaults to LLM_API_KEY env var
-    "base_url": "https://api.openai.com/v1",  # Optional, defaults to LLM_BASE_URL env var
+    "base_url": "https://api.deepseek.com/v1",  # Optional, defaults to LLM_BASE_URL env var
     "generate_cfg": {
         "temperature": 0.6,          # Sampling temperature (0.0-2.0)
         "top_p": 0.95,              # Nucleus sampling
