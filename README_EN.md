@@ -28,8 +28,9 @@
 
 **WebResearcher** is an autonomous research agent built on the **IterResearch paradigm**, designed to emulate expert-level research workflows. Unlike traditional agents that suffer from context overflow and noise accumulation, WebResearcher breaks research into discrete rounds with iterative synthesis.
 
-This project provides two research agents:
+This project provides three research agents:
 - **WebResearcher Agent**: Single-agent iterative research, ideal for quick answers
+- **ReactAgent**: Classic ReAct paradigm multi-turn dialog agent, supports OpenAI Function Calling and XML protocol
 - **WebWeaver Agent**: Dual-agent collaborative research, ideal for structured long-form reports
 
 ### The Problem with Traditional Agents
@@ -94,11 +95,13 @@ Round i:
 
 | Tool | Description | Use Case |
 |------|-------------|----------|
-| `search` | Google Search via Serper API | General web information |
+| `search` | Google Search via Serper API (auto-fallback to Baidu Search) | General web information |
 | `google_scholar` | Academic paper search | Scientific research |
 | `visit` | Webpage content extraction | Deep content analysis |
 | `python` | Sandboxed code execution | Data analysis, calculations |
 | `parse_file` | Multi-format file parser | Document processing |
+
+> **Note**: When `SERPER_API_KEY` is not configured or unavailable, the `search` tool automatically falls back to Baidu Search without additional configuration.
 
 ## 🚀 Quick Start
 
@@ -177,6 +180,10 @@ asyncio.run(main())
 
 If you prefer a multi-turn dialog implementation closer to the ReAct paper, this project provides a `ReactAgent`.
 
+**Supports two tool calling modes:**
+1. **OpenAI Function Calling (default)**: Uses OpenAI-style tools parameter, works with OpenAI/DeepSeek/etc.
+2. **XML Protocol**: Uses `<tool_call>` tags, compatible with all LLMs including local models
+
 Usage example:
 
 ```python
@@ -190,11 +197,17 @@ llm_config = {
     "generate_cfg": {"temperature": 0.6}
 }
 
+# Function Calling mode (default)
 agent = ReactAgent(
     llm_config=llm_config,
     function_list=["search", "google_scholar", "visit", "python"],
-    api_key="your-api-key",    # Optional, overrides llm_config setting
-    base_url="https://api.openai.com/v1"  # Optional
+)
+
+# Or use XML protocol mode (compatible with local LLMs)
+agent_xml = ReactAgent(
+    llm_config=llm_config,
+    function_list=["search", "visit", "python"],
+    use_xml_protocol=True,
 )
 
 async def main():
@@ -203,6 +216,16 @@ async def main():
     print(result["prediction"])  # Always non-empty
 
 asyncio.run(main())
+```
+
+**Command Line Usage:**
+
+```bash
+# ReactAgent (Function Calling mode)
+python main.py --use_react --test_case_limit 1
+
+# ReactAgent (XML protocol mode, compatible with local models)
+python main.py --use_react --use_xml_protocol --test_case_limit 1
 ```
 
 Message trajectory illustration (for logging/inspection):
@@ -510,19 +533,19 @@ webresearcher "Research question" --use-webweaver --output report.json
 webresearcher "Question" --use-webweaver --verbose
 ```
 
-### WebResearcher vs WebWeaver Comparison
+### WebResearcher vs ReactAgent vs WebWeaver Comparison
 
-| Feature | WebResearcher | WebWeaver |
-|---------|---------------|-----------|
-| Architecture | Single-agent | Dual-agent |
-| Paradigm | IterResearch | Dynamic Outline |
-| Memory | Stateless workspace | Memory Bank |
-| Output | Direct answer | Outline + Report |
-| Citations | Implicit | Explicit with IDs |
-| Structure | Iterative synthesis | Hierarchical |
-| Best for | Quick answers | Comprehensive reports |
+| Feature | WebResearcher | ReactAgent | WebWeaver |
+|---------|---------------|------------|-----------|
+| Architecture | Single-agent | Single-agent | Dual-agent |
+| Paradigm | IterResearch | ReAct Multi-turn | Dynamic Outline |
+| Memory | Stateless workspace | Message trajectory | Memory Bank |
+| Output | Direct answer + Report | Direct answer | Outline + Report |
+| Tool Calling | XML protocol | Function Calling / XML | XML protocol |
+| Citations | Implicit | Implicit | Explicit with IDs |
+| Best for | Quick answers | General Q&A | Comprehensive reports |
 
-### When to Use WebWeaver
+### When to Use Which Agent
 
 Choose **WebWeaver** when you need:
 - ✅ Long-form, comprehensive research reports
@@ -531,9 +554,15 @@ Choose **WebWeaver** when you need:
 - ✅ Reproducible research process
 - ✅ Multi-section documents
 
+Choose **ReactAgent** when you need:
+- ✅ Classic ReAct paradigm
+- ✅ OpenAI Function Calling compatibility
+- ✅ Local LLM support (XML protocol)
+- ✅ Simple multi-turn dialog
+
 Choose **WebResearcher** when you need:
 - ✅ Quick, focused answers
-- ✅ Simpler architecture
+- ✅ Iterative synthesis reports
 - ✅ Direct question-answer format
 - ✅ Lower token usage
 - ✅ Faster results
@@ -542,7 +571,8 @@ Choose **WebResearcher** when you need:
 
 See the [examples/](./examples/) directory for complete examples:
 
-- **[basic_usage.py](examples/webresearcher_usage.py)** - WebResearcher Agent usage example
+- **[webresearcher_usage.py](examples/webresearcher_usage.py)** - WebResearcher Agent usage example
+- **[react_agent_usage.py](examples/react_agent_usage.py)** - ReactAgent usage example
 - **[batch_research.py](./examples/batch_research.py)** - Processing multiple questions
 - **[custom_agent.py](./examples/custom_agent.py)** - Creating custom tools
 - **[webweaver_usage.py](examples/webweaver_usage.py)** - WebWeaver Agent usage example

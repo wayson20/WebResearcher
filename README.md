@@ -29,8 +29,9 @@
 
 **WebResearcher** 是迭代式深度研究智能体，基于 **IterResearch 范式**构建的自主研究智能体，旨在模拟专家级别的研究工作流。与遭受上下文溢出和噪音累积困扰的传统 Agent 不同，WebResearcher 将研究分解为离散的轮次，并进行迭代综合。
 
-本项目提供两种研究智能体：
+本项目提供三种研究智能体：
 - **WebResearcher Agent**: 单智能体迭代研究，适合快速问答
+- **ReactAgent**: 经典 ReAct 范式的多轮对话智能体，支持 OpenAI Function Calling 和 XML 协议
 - **WebWeaver Agent**: 双智能体协作研究，适合生成结构化长篇报告
 
 ### 传统 Agent 的问题
@@ -95,11 +96,13 @@ WebResearcher 实现了 **IterResearch 范式**，每轮通过**单次 LLM 调�
 
 | 工具 | 描述 | 使用场景 |
 |------|------|----------|
-| `search` | 通过 Serper API 的 Google 搜索 | 通用网页信息 |
+| `search` | 通过 Serper API 的 Google 搜索（自动降级为百度搜索） | 通用网页信息 |
 | `google_scholar` | 学术论文搜索 | 科研文献查询 |
 | `visit` | 网页内容提取 | 深度内容分析 |
 | `python` | 沙盒代码执行 | 数据分析、计算 |
 | `parse_file` | 多格式文件解析器 | 文档处理 |
+
+> **注意**: 当 `SERPER_API_KEY` 未配置或不可用时，`search` 工具会自动降级为百度搜索，无需额外配置。
 
 ## 🚀 快速开始
 
@@ -176,6 +179,10 @@ asyncio.run(main())
 
 如果你更偏好接近 ReAct 论文的多轮对话实现，本项目提供了 `ReactAgent`。
 
+**支持两种工具调用模式：**
+1. **OpenAI Function Calling（默认）**: 使用 OpenAI 风格的 tools 参数，适用于 OpenAI/DeepSeek 等
+2. **XML 协议**: 使用 `<tool_call>` 标签，兼容所有 LLM（包括本地模型）
+
 使用示例：
 
 ```python
@@ -189,9 +196,17 @@ llm_config = {
     "generate_cfg": {"temperature": 0.6}
 }
 
+# Function Calling 模式（默认）
 agent = ReactAgent(
     llm_config=llm_config,
     function_list=["search", "google_scholar", "visit", "python"],
+)
+
+# 或者使用 XML 协议模式（兼容本地 LLM）
+agent_xml = ReactAgent(
+    llm_config=llm_config,
+    function_list=["search", "visit", "python"],
+    use_xml_protocol=True,
 )
 
 async def main():
@@ -200,6 +215,16 @@ async def main():
     print(result["prediction"])  # 始终为非空字符串
 
 asyncio.run(main())
+```
+
+**命令行使用：**
+
+```bash
+# ReactAgent（Function Calling 模式）
+python main.py --use_react --test_case_limit 1
+
+# ReactAgent（XML 协议模式，兼容本地模型）
+python main.py --use_react --use_xml_protocol --test_case_limit 1
 ```
 
 日志中的消息轨迹（`trajectory`）示意：
@@ -495,17 +520,17 @@ webresearcher "研究问题" --use-webweaver --output report.json
 webresearcher "问题" --use-webweaver --verbose
 ```
 
-### WebResearcher vs WebWeaver 对比
+### WebResearcher vs ReactAgent vs WebWeaver 对比
 
-| 特性 | WebResearcher | WebWeaver |
-|------|---------------|-----------|
-| 架构 | 单智能体 | 双智能体 |
-| 范式 | IterResearch | 动态大纲 |
-| 记忆 | 无状态工作空间 | Memory Bank |
-| 输出 | 直接答案 | 大纲 + 报告 |
-| 引用 | 隐式 | 显式带 ID |
-| 结构 | 迭代综合 | 层次化 |
-| 适用场景 | 快速问答 | 综合报告 |
+| 特性 | WebResearcher | ReactAgent | WebWeaver |
+|------|---------------|------------|-----------|
+| 架构 | 单智能体 | 单智能体 | 双智能体 |
+| 范式 | IterResearch | ReAct 多轮对话 | 动态大纲 |
+| 记忆 | 无状态工作空间 | 消息轨迹 | Memory Bank |
+| 输出 | 直接答案 + 报告 | 直接答案 | 大纲 + 报告 |
+| 工具调用 | XML 协议 | Function Calling / XML | XML 协议 |
+| 引用 | 隐式 | 隐式 | 显式带 ID |
+| 适用场景 | 快速问答 | 通用问答 | 综合报告 |
 
 ### 何时使用 WebWeaver
 
@@ -516,9 +541,15 @@ webresearcher "问题" --use-webweaver --verbose
 - ✅ 可复现的研究过程
 - ✅ 多章节文档
 
+选择 **ReactAgent** 当您需要：
+- ✅ 经典 ReAct 范式
+- ✅ OpenAI Function Calling 兼容
+- ✅ 本地 LLM 支持（XML 协议）
+- ✅ 简单的多轮对话
+
 选择 **WebResearcher** 当您需要：
 - ✅ 快速、聚焦的答案
-- ✅ 更简单的架构
+- ✅ 迭代综合报告
 - ✅ 直接的问答格式
 - ✅ 更低的 Token 使用量
 - ✅ 更快的结果
@@ -528,6 +559,7 @@ webresearcher "问题" --use-webweaver --verbose
 查看 [examples/](./examples/) 目录获取完整示例：
 
 - **[webresearcher_usage.py](examples/webresearcher_usage.py)** - WebResearcher Agent 使用示例
+- **[react_agent_usage.py](examples/react_agent_usage.py)** - ReactAgent 使用示例
 - **[batch_research.py](./examples/batch_research.py)** - 批量处理多个问题
 - **[custom_agent.py](./examples/custom_agent.py)** - 创建自定义工具
 - **[webweaver_usage.py](examples/webweaver_usage.py)** - WebWeaver Agent 使用示例

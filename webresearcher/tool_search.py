@@ -1,11 +1,11 @@
 from typing import Dict, List, Optional, Union
 import http.client
 import json
+import re
 from webresearcher.log import logger
 from webresearcher.base import BaseTool
 from webresearcher.config import SERPER_API_KEY
-
-logger.debug(f"SERPER_API_KEY: {SERPER_API_KEY}")
+from baidusearch.baidusearch import search as baidu_search
 
 
 class Search(BaseTool):
@@ -28,6 +28,39 @@ class Search(BaseTool):
     def __init__(self, cfg: Optional[dict] = None):
         pass  # No parent __init__ needed
 
+    def _clean_text(self, text: str) -> str:
+        """清理文本：删除多余空白字符和空行"""
+        if not text:
+            return ""
+        text = re.sub(r'[ \t]+', ' ', text)
+        text = re.sub(r'\n\s*\n', '\n', text)
+        text = text.strip()
+        return text
+
+    def baidu_search_fallback(self, query: str, num_results: int = 10) -> str:
+        """百度搜索"""
+        try:
+            results = baidu_search(query, num_results=num_results)
+            if not results:
+                return f"No results found for '{query}'. Try with a more general query."
+            
+            web_snippets = []
+            for idx, r in enumerate(results, 1):
+                title = self._clean_text(r.get('title', ''))
+                url = r.get('url', '')
+                abstract = self._clean_text(r.get('abstract', ''))
+                
+                snippet = f"{idx}. [{title}]({url})"
+                if abstract:
+                    snippet += f"\n{abstract}"
+                web_snippets.append(snippet)
+            
+            content = f"A Baidu search for '{query}' found {len(web_snippets)} results:\n\n## Web Results\n" + "\n\n".join(web_snippets)
+            return content
+        except Exception as e:
+            logger.error(f"Baidu search error: {e}")
+            return f"Baidu search failed for '{query}': {str(e)}"
+
     def google_search_with_serp(self, query: str):
         def contains_chinese_basic(text: str) -> bool:
             return any('\u4E00' <= char <= '\u9FFF' for char in text)
@@ -49,7 +82,7 @@ class Search(BaseTool):
                 "hl": "en"
             })
         if not SERPER_API_KEY:
-            return "SERPER_API_KEY is not set. Please set the SERPER_API_KEY environment variable."
+            return ""
         headers = {
             'X-API-KEY': SERPER_API_KEY,
             'Content-Type': 'application/json'
@@ -63,7 +96,7 @@ class Search(BaseTool):
             except Exception as e:
                 print(e)
                 if i == 4:
-                    return f"Google search Timeout, return None, Please try again later."
+                    return ""
                 continue
 
         data = res.read()
@@ -98,11 +131,15 @@ class Search(BaseTool):
                 web_snippets)
             return content
         except:
-            return f"No results found for '{query}'. Try with a more general query."
+            return ""
 
     def search_with_serp(self, query: str):
-        result = self.google_search_with_serp(query)
-        return result
+        """优先使用Serper API，如果不可用则降级为百度搜索"""
+        if SERPER_API_KEY:
+            result = self.google_search_with_serp(query)
+            if result:
+                return result
+        return self.baidu_search_fallback(query)
 
     def call(self, params: Union[str, dict], **kwargs) -> str:
         try:

@@ -47,6 +47,7 @@ dependencies = [
     "uvicorn",
     "markdownify",
     "httpx",
+    "baidusearch",
 ]
 
 [project.optional-dependencies]

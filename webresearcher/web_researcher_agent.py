@@ -110,7 +110,7 @@ class WebResearcherAgent:
     def __init__(
             self,
             llm_config: Optional[Dict] = None,
-            function_list: Optional[List[str]] = None,
+            function_list: Optional[List[str]] = None, # "search", "visit", "python" defult can be use without api key
             instruction: str = "",
             api_key: Optional[str] = None,
             base_url: Optional[str] = None,

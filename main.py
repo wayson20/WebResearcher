@@ -32,12 +32,22 @@ async def main(args):
     if hasattr(args, 'model_thinking_type') and args.model_thinking_type != 'disabled':
         llm_config["generate_cfg"]["model_thinking_type"] = args.model_thinking_type
 
-    # 2. 选择代理模式
+    # 2. 选择代理模式（互斥：webweaver / react / default）
     if args.use_webweaver:
         logger.info("✅ Using WebWeaver dual-agent mode (dynamic outline)")
         from webresearcher.web_weaver_agent import WebWeaverAgent
         agent = WebWeaverAgent(llm_config=llm_config, function_list=args.function_list)
         mode = 'webweaver'
+        use_tts_mode = False
+    elif args.use_react:
+        logger.info("✅ Using ReactAgent mode (ReAct paradigm)")
+        from webresearcher.react_agent import ReactAgent
+        agent = ReactAgent(
+            llm_config=llm_config,
+            function_list=args.function_list,
+            use_xml_protocol=args.use_xml_protocol,
+        )
+        mode = 'react'
         use_tts_mode = False
     elif args.use_tts:
         logger.warning("=" * 80)
@@ -55,13 +65,13 @@ async def main(args):
         mode = 'tts'
         use_tts_mode = True
     else:
-        logger.info("✅ Using single-agent mode (cost-effective)")
+        logger.info("✅ Using WebResearcherAgent mode (default)")
         from webresearcher.web_researcher_agent import WebResearcherAgent
         agent = WebResearcherAgent(
             llm_config=llm_config,
             function_list=args.function_list,
         )
-        mode = 'single'
+        mode = 'default'
         use_tts_mode = False
 
     # 3. 准备输入数据 (与原始的 `run` 格式一致)
@@ -109,8 +119,10 @@ async def main(args):
         logger.info(f"📝 Question {idx}/{len(test_case)}: {question[:100]}...")
         logger.info(f"{'='*80}")
 
-        # Run agent (WebWeaver / TTS / single)
+        # Run agent (WebWeaver / React / TTS / default)
         if mode == 'webweaver':
+            final_result = await agent.run(question)
+        elif mode == 'react':
             final_result = await agent.run(question)
         elif use_tts_mode:
             final_result = await agent.run(
@@ -134,6 +146,9 @@ async def main(args):
             print(f"\n--- Final Report ---")
             print(final_result.get('final_report', ''))
             print(f"\nMemory Bank Size: {final_result.get('memory_bank_size', 0)}")
+        elif mode == 'react':
+            print(f"Prediction: {final_result['prediction']}")
+            print(f"Termination: {final_result['termination']}")
         elif use_tts_mode:
             print(f"Final Answer (TTS): {final_result['final_synthesized_answer']}")
             print(f"\n--- Parallel Runs: {len(final_result['parallel_runs'])} ---")
@@ -149,6 +164,8 @@ async def main(args):
             if mode == 'webweaver':
                 # WebWeaver returns planner/writer internals in logs; not included by default
                 print("(WebWeaver) Full trajectory logging is not enabled in main.py; use CLI or examples/webweaver_usage.py for detailed logs.")
+            elif mode == 'react':
+                print(json.dumps(final_result['trajectory'], indent=2, ensure_ascii=False))
             elif use_tts_mode:
                 print(json.dumps(final_result['parallel_runs'], indent=2, ensure_ascii=False))
             else:
@@ -169,6 +186,12 @@ Examples:
   
   # WebWeaver dual-agent (dynamic outline, citation-grounded report)
   python main.py --use_webweaver --test_case_limit 1
+  
+  # ReactAgent (ReAct paradigm)
+  python main.py --use_react --test_case_limit 1
+  
+  # ReactAgent with XML protocol (for local LLMs)
+  python main.py --use_react --use_xml_protocol --test_case_limit 1
   
   # Custom model and tools
   python main.py --model gpt-4o --function_list search python
@@ -192,12 +215,16 @@ Examples:
     
     # Agent configuration
     parser.add_argument("--function_list", type=str, nargs='*',
-                        default=["search", "google_scholar", "python"],
+                        default=["search", "visit", "python"],
                         help="List of tools to enable, all tools: ['search', 'google_scholar', 'visit', 'python', 'parse_file']")
     
-    # Modes
+    # Modes (mutually exclusive: webweaver / react / tts / default)
     parser.add_argument("--use_webweaver", action="store_true",
                         help="Enable WebWeaver dual-agent mode (Planner + Writer)")
+    parser.add_argument("--use_react", action="store_true",
+                        help="Enable ReactAgent mode (ReAct paradigm)")
+    parser.add_argument("--use_xml_protocol", action="store_true",
+                        help="Use XML protocol for ReactAgent (compatible with local LLMs)")
     # Test-Time Scaling (TTS)
     parser.add_argument("--use_tts", action="store_true",
                         help="Enable Test-Time Scaling (3-5x cost, higher accuracy)")
@@ -212,10 +239,22 @@ Examples:
     
     args = parser.parse_args()
     
+    # Validate mutually exclusive modes
+    mode_count = sum([args.use_webweaver, args.use_react, args.use_tts])
+    if mode_count > 1:
+        parser.error("--use_webweaver, --use_react, and --use_tts are mutually exclusive. Choose only one.")
+    
     # Print configuration
     logger.info("🚀 Starting WebResearcher/WebWeaver")
     logger.info(f"   Model: {args.model}")
-    mode_label = 'WebWeaver' if args.use_webweaver else ('TTS (Test-Time Scaling)' if args.use_tts else 'Single Agent')
+    if args.use_webweaver:
+        mode_label = 'WebWeaver'
+    elif args.use_react:
+        mode_label = 'ReactAgent' + (' (XML)' if args.use_xml_protocol else ' (Function Calling)')
+    elif args.use_tts:
+        mode_label = 'TTS (Test-Time Scaling)'
+    else:
+        mode_label = 'WebResearcherAgent (default)'
     logger.info(f"   Mode: {mode_label}")
     logger.info(f"   Tools: {', '.join(args.function_list)}")
     

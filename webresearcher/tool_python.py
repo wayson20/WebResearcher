@@ -105,7 +105,7 @@ class PythonInterpreter(BaseToolWithFileAccess):
 
             # Check if endpoints are available, fallback to local execution
             if not SANDBOX_FUSION_ENDPOINTS:
-                logger.debug('No sandbox fusion endpoints available, falling back to local execution')
+                logger.debug('No sandbox fusion endpoints available, use local python execution')
                 return self.run_python_code_locally(code)
 
             last_error = None

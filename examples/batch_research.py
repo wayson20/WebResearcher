@@ -26,17 +26,11 @@ async def batch_research(questions, output_dir="./results"):
         questions: List of question strings or dicts with 'question' and 'ground_truth'
         output_dir: Directory to save results
     """
-    # Create output directory
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
-    # Configure agent
-    llm_config = {
-        "model": "gpt-4o",
-    }
-    
     agent = WebResearcherAgent(
-        llm_config=llm_config,
+        model="gpt-4o",
         function_list=["search", "python"]
     )
     

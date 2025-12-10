@@ -279,8 +279,6 @@ class Visit(BaseTool):
         max_attempts = 1  # 减少重试次数从 2 到 1
         for attempt in range(max_attempts):
             content = self.jina_readpage(url)
-            service = "jina or local"     
-            logger.debug(f"Using service: {service}")
             if content and not content.startswith("[visit] Failed to read page.") and content != "[visit] Empty content." and not content.startswith("[document_parser]"):
                 return content
         return "[visit] Failed to read page."
