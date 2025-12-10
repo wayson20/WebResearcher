@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "An Iterative Deep-Research Agent with unbounded reasoning capability"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 authors = [
     {name = "XuMing", email = "xuming624@qq.com"}
 ]
@@ -17,7 +17,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -76,7 +75,12 @@ webresearcher = "webresearcher.cli:main"
 packages = ["webresearcher", "webresearcher.file_tools", "webui", "webui.api", "webui.config", "webui.static"]
 
 [tool.setuptools.package-data]
-webui = ["static/*", "data/*", "*.md", "*.txt"]
+webui = ["static/*", "*.md", "*.txt"]
+
+[tool.setuptools.exclude-package-data]
+"webui.data" = ["*"]
+
+[tool.setuptools_scm]
 
 [tool.setuptools.dynamic]
 version = {attr = "webresearcher.__version__"}
