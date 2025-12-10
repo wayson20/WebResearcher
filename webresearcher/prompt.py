@@ -67,22 +67,17 @@ TOOL_DESCRIPTIONS = {
         "type": "function",
         "function": {
             "name": "python",
-            "description": """Executes Python code in a sandboxed environment. To use this tool, you must follow this format:
-1. The 'arguments' JSON object must be empty: {}.
-2. The Python code to be executed must be placed immediately after the JSON block, enclosed within <code> and </code> tags.
-
-IMPORTANT: Any output you want to see MUST be printed to standard output using the print() function.
-
-Example of a correct call:
-<tool_call>
-{"name": "python", "arguments": {}}
-<code>
-import numpy as np
-# Your code here
-print(f"The result is: {np.mean([1,2,3])}")
-</code>
-</tool_call>""",
-            "parameters": {"type": "object", "properties": {}, "required": []}
+            "description": """Executes Python code in a sandboxed environment. Use this tool to perform calculations, data processing, or any Python operations. IMPORTANT: Any output you want to see MUST be printed to standard output using the print() function. Example:{"name": "python", "arguments": {"code": "import numpy as np\\nresult = np.mean([1,2,3])\\nprint(f'The result is: {result}')"}}""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": "The Python code to execute. Use \\n for newlines."
+                    }
+                },
+                "required": ["code"]
+            }
         }
     },
     "google_scholar": {"type": "function", "function": {"name": "google_scholar", "description": "Leverage Google Scholar to retrieve relevant information from academic publications. Accepts multiple queries. This tool will also return results from google search", "parameters": {"type": "object", "properties": {"query": {"type": "array", "items": {"type": "string", "description": "The search query."}, "minItems": 1, "description": "The list of search queries for Google Scholar."}}, "required": ["query"]}}},
@@ -114,9 +109,9 @@ def _format_tool_desc(tool_item) -> str:
         }, ensure_ascii=False)
 
 
-def get_react_system_prompt(today: str, tools: list, instruction: str = "", question: Optional[str] = None) -> str:
+def get_react_system_prompt_xml(today: str, tools: list, instruction: str = "", question: Optional[str] = None) -> str:
     """
-    Generates a system prompt for ReactAgent including descriptions for the specified tools.
+    Generates a system prompt for ReactAgent including descriptions for the specified tools. XML format for tool descriptions.
 
     Enhancements:
     - Accepts an optional `instruction` that will be appended as a mandatory, task-specific section.
@@ -151,11 +146,89 @@ def get_react_system_prompt(today: str, tools: list, instruction: str = "", ques
 
     return prompt
 
+def get_react_system_prompt_fc(today: str, tools: list, instruction: str = "", question: Optional[str] = None) -> str:
+    """
+    Generates a system prompt for ReactAgent including descriptions for the specified tools. Function Calling format for tool descriptions.
+    """
+    system_prompt = (
+        f"You are a deep research assistant. Today is {today}. "
+        "Your core function is to conduct thorough, multi-source investigations. "
+        "Use the provided tools to search and visit web pages. "
+        "When you have the final answer, respond with the answer directly. Output the answer same language as the user question."
+    )
+    if instruction:
+        system_prompt += f"\n\nTask-specific instruction:\n{instruction}"
+    return system_prompt
+
+
+def get_iterresearch_system_prompt_fc(today: str, instruction: str = "", question: Optional[str] = None) -> str:
+    """
+    Generate simplified system prompt for IterResearch paradigm in Function Calling mode.
+    
+    This prompt does NOT include XML format instructions (<tool_call>, <plan>, <report>, etc.),
+    allowing the LLM to use native OpenAI-style function calling.
+    
+    Args:
+        today: Current date string
+        instruction: Optional custom instruction
+        question: Optional question for language detection
+        
+    Returns:
+        System prompt string for Function Calling mode
+    """
+    instruction_text = ""
+    if instruction:
+        instruction_text = f"\n\nAdditional persona instructions:\n{instruction}\n"
+    
+    use_chinese = question and is_chinese(question)
+    
+    if use_chinese:
+        return f"""你是 WebResearcher，一个高级 AI 研究助手。今天是 {today}。
+你的目标是通过迭代搜索网络和综合信息，以高准确性和深度回答用户的问题。
+{instruction_text}
+**核心工作流程：**
+你在一个循环中运行。在每一轮中，你将收到原始问题、当前研究报告和上次工具调用的结果。
+
+**你的任务：**
+1. 分析当前信息是否足以回答问题
+2. 如果需要更多信息，使用提供的工具进行搜索或访问网页
+3. 当你有足够信息时，直接提供最终答案
+
+**重要规则：**
+- 使用提供的工具来搜索和访问网页
+- 当你准备好提供最终答案时，直接回复答案内容，不要再调用工具
+- 答案应该全面、准确，并与问题使用相同的语言
+
+**特殊情况：**
+- 如果用户只是打招呼（如"你好"），请友好回应并引导用户提出具体问题
+"""
+    else:
+        return f"""You are WebResearcher, an advanced AI research agent. Today is {today}.
+Your goal is to answer the user's question with high accuracy and depth by iteratively searching the web and synthesizing information.
+{instruction_text}
+**Core Workflow:**
+You operate in a loop. In each round, you will receive the original question, the current research report, and the result from your last tool call.
+
+**Your Task:**
+1. Analyze whether the current information is sufficient to answer the question
+2. If more information is needed, use the provided tools to search or visit web pages
+3. When you have sufficient information, provide the final answer directly
+
+**Important Rules:**
+- Use the provided tools to search and visit web pages
+- When you are ready to provide the final answer, respond with the answer content directly without calling tools
+- The answer should be comprehensive, accurate, and in the same language as the question
+
+**Special Cases:**
+- If the user is just greeting (e.g., "hello"), respond warmly and invite them to ask a specific question
+"""
+
+
 def get_iterresearch_system_prompt(today: str, function_list: list, instruction: str = "", question: Optional[str] = None) -> str:
     """
-    Generate system prompt for IterResearch paradigm.
+    Generate system prompt for IterResearch paradigm (XML Protocol mode).
     
-    Requires LLM to generate <plan>, <report>, and <tool_call>/<answer> in a single call. 
+    Requires LLM to generate <plan>, <report>, and <tool_call>/<answer> in a single call.
     """
     tools_text = "\n".join(_format_tool_desc(tool) for tool in function_list)
     instruction_text = ""

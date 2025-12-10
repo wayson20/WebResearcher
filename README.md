@@ -131,7 +131,7 @@ python3 app.py
 - 🎯 **研究过程可视化**: 计划、报告、工具调用分步展示
 - ⚙️ **灵活配置**: 支持自定义指令和工具选择
 
-详见 [WebUI 文档](./webui/README.md)
+详见 [WebUI 文档](https://github.com/shibing624/WebResearcher/blob/main/webui/README.md)
 
 ### CLI 基础使用
 
@@ -246,7 +246,7 @@ TOOL_MAP['my_tool'] = MyCustomTool()
 agent = WebResearcherAgent(function_list=["my_tool", "search"])
 ```
 
-查看 [examples/custom_agent.py](./examples/custom_agent.py) 获取完整示例。
+查看 [examples/custom_agent.py](https://github.com/shibing624/WebResearcher/blob/main/examples/custom_agent.py) 获取完整示例。
 
 ### 批量处理
 

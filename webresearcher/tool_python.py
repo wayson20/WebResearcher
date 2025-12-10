@@ -25,14 +25,14 @@ def has_chinese_chars(texts: List[str]) -> bool:
 
 class PythonInterpreter(BaseToolWithFileAccess):
     name = "python"
-    description = 'Execute Python code in a sandboxed environment. Use this to run Python code and get the execution results.\n**Make sure to use print() for any output you want to see in the results.**\nFor code parameters, use placeholders first, and then put the code within <code></code> XML tags, such as:\n<tool_call>\n{"purpose": <detailed-purpose-of-this-tool-call>, "name": <tool-name>, "arguments": {"code": ""}}\n<code>\nHere is the code.\n</code>\n</tool_call>\n'
+    description = 'Execute Python code in a sandboxed environment. Use this to run Python code and get the execution results.\n**Make sure to use print() for any output you want to see in the results.**'
 
     parameters = {
         "type": "object",
         "properties": {
             "code": {
                 "type": "string",
-                "description": "The Python code to execute. Must be provided within <code></code> XML tags. Remember to use print() statements for any output you want to see.",
+                "description": "The Python code to execute. Remember to use print() statements for any output you want to see.",
             }
         },
         "required": ["code"],

@@ -33,15 +33,11 @@ async def batch_research(questions, output_dir="./results"):
     # Configure agent
     llm_config = {
         "model": "gpt-4o",
-        "generate_cfg": {
-            "temperature": 0.6,
-            "top_p": 0.95,
-        }
     }
     
     agent = WebResearcherAgent(
         llm_config=llm_config,
-        function_list=["search", "google_scholar", "python"]
+        function_list=["search", "python"]
     )
     
     # Process each question
@@ -66,8 +62,7 @@ async def batch_research(questions, output_dir="./results"):
             # Add metadata
             result['index'] = i
             result['ground_truth'] = ground_truth
-            result['success'] = result.get('termination') == 'answer'
-            
+            result['success'] = result.get('termination', '')
             results.append(result)
             
             # Save individual result
@@ -77,11 +72,11 @@ async def batch_research(questions, output_dir="./results"):
             
             # Print summary
             print(f"\n✅ Question {i} completed")
-            print(f"   Answer: {result['prediction'][:100]}...")
+            print(f"   Question: {question}")
+            print(f"   Answer: {result['prediction']}")
             if ground_truth:
                 print(f"   Ground Truth: {ground_truth}")
             print(f"   Saved to: {output_file}")
-            
         except Exception as e:
             logger.error(f"❌ Question {i} failed: {e}")
             results.append({
@@ -94,8 +89,6 @@ async def batch_research(questions, output_dir="./results"):
     # Save summary
     summary = {
         'total': len(questions),
-        'successful': sum(1 for r in results if r.get('success')),
-        'failed': sum(1 for r in results if not r.get('success')),
         'results': results
     }
     
@@ -108,9 +101,6 @@ async def batch_research(questions, output_dir="./results"):
     print("BATCH RESEARCH SUMMARY")
     print(f"{'='*80}")
     print(f"Total Questions: {summary['total']}")
-    print(f"Successful: {summary['successful']}")
-    print(f"Failed: {summary['failed']}")
-    print(f"Success Rate: {summary['successful']/summary['total']*100:.1f}%")
     print(f"\nResults saved to: {output_dir}/")
     
     return summary
@@ -132,7 +122,7 @@ async def main():
     ]
     
     # Run batch research
-    summary = await batch_research(questions, output_dir="./batch_results")
+    summary = await batch_research(questions, output_dir="./outputs")
     
     return summary
 

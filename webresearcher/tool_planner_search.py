@@ -3,7 +3,6 @@
 @author:XuMing(xuming624@qq.com)
 @description: Planner-specific Search Tool with Memory Bank integration for WebWeaver
 """
-import json5
 from typing import Dict
 from webresearcher.base import BaseTool
 from webresearcher.tool_search import Search

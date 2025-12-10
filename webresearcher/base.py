@@ -3,12 +3,12 @@
 @author:XuMing(xuming624@qq.com)
 @description: Base classes and utilities for WebResearcher
 """
-
+from typing import Dict, List, Optional, Any, Union
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Union
 from enum import Enum
+from dataclasses import dataclass, field
+import datetime
 
 
 # ============ Message Schema ============
@@ -265,6 +265,10 @@ def build_text_completion_prompt(messages: List[Union[Message, Dict]],
         prompt_parts.append(f"{role}: {content}")
     
     return "\n".join(prompt_parts)
+
+
+def today_date():
+    return datetime.date.today().strftime("%Y-%m-%d")
 
 
 # ============ Settings / Constants ============

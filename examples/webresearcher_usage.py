@@ -59,7 +59,7 @@ async def example_basic_research():
     # Create agent
     agent = WebResearcherAgent(
         llm_config=llm_config,
-        function_list=["search", "google_scholar", "python"]
+        function_list=["search", "python"]
     )
     
     print(f"Model: {agent.model}")

@@ -152,10 +152,4 @@ print(result5)
 
 print("\n" + "=" * 70)
 print("\n所有示例执行完成！")
-print("\n使用建议：")
-print("1. 生产环境建议配置 SANDBOX_FUSION_ENDPOINTS 使用沙箱执行")
-print("2. 本地开发可以直接使用本地执行模式")
-print("3. 始终使用 print() 输出你想看到的结果")
-print("4. 代码可以使用三引号或 <code></code> 标签包裹")
-print("=" * 70)
 

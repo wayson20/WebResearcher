@@ -34,11 +34,11 @@ def print_result(result, title="ReactAgent Result"):
 
 
 async def example_react_with_tools():
-    """ReactAgent with multiple tools including Python"""
+    """ReactAgent with XML protocol mode"""
     print("\n" + "="*80)
-    print("ReactAgent - Question Requiring Multiple Tools")
+    print("ReactAgent - Question Requiring Multiple Tools (XML Protocol)")
     print("="*80)
-    print("This example demonstrates ReactAgent using search and Python tools.\n")
+    print("This example demonstrates ReactAgent using XML-based tool calling.\n")
     
     # Configure LLM
     llm_config = {
@@ -50,9 +50,11 @@ async def example_react_with_tools():
         "llm_timeout": 300.0,
     }
     
-    # Initialize ReactAgent with more tools
+    # Initialize ReactAgent with XML protocol mode
+    # use_xml_protocol=True uses <tool_call> XML tags (compatible with all LLMs)
     agent = ReactAgent(
         llm_config=llm_config,
+        use_xml_protocol=True,  # Use XML-based tool calling
         function_list=["search", "python", "visit"]
     )
     
@@ -64,8 +66,42 @@ async def example_react_with_tools():
     result = await agent.run(question)
     
     # Display results
-    print_result(result, "example_react_with_tools Result")
+    print_result(result, "example_react_with_tools (XML Protocol) Result")
 
+async def example_react_with_tools_fc():
+    """ReactAgent with multiple tools using OpenAI Function Calling"""
+    print("\n" + "="*80)
+    print("ReactAgent - Question Requiring Multiple Tools (Function Calling)")
+    print("="*80)
+    print("This example demonstrates ReactAgent using OpenAI-style function calling.\n")
+    
+    # Configure LLM
+    llm_config = {
+        "model": "gpt-4o",
+        "generate_cfg": {
+            "temperature": 0.6,
+            "top_p": 0.95,
+        },
+        "llm_timeout": 300.0,
+    }
+    
+    # Initialize ReactAgent with function calling (default mode)
+    # use_xml_protocol=False (default) uses OpenAI-style function calling
+    agent = ReactAgent(
+        llm_config=llm_config,
+        # use_xml_protocol=False,  # Default: uses OpenAI function calling
+        function_list=["search", "python", "visit"]
+    )
+    
+    # Define question that might need calculation
+    question = "What is the population of Paris in 2024? Calculate the square root of that number."
+    logger.info(f"Question: {question}")
+    
+    # Run agent
+    result = await agent.run(question)
+    
+    # Display results
+    print_result(result, "example_react_with_tools (Function Calling) Result")
 
 async def example_react_open_ended():
     """ReactAgent handling open-ended questions"""
@@ -223,8 +259,11 @@ async def main():
     print("Demonstrating MultiTurn ReAct-style agent with tool calling")
     print("="*80)
 
-    # Example 1: Multiple tools
+    # Example 1: XML Protocol mode (compatible with all LLMs)
     await example_react_with_tools()
+
+    # Example 2: OpenAI Function Calling mode (default)
+    await example_react_with_tools_fc()
     
     # Example 2: Open-ended questions
     # await example_react_open_ended()

@@ -6,7 +6,7 @@ A powerful research agent implementing the IterResearch paradigm,
 featuring unbounded reasoning capability through iterative synthesis.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "XuMing"
 __email__ = "xuming624@qq.com"
 __url__ = "https://github.com/shibing624/WebResearcher"

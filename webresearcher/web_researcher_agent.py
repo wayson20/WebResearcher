@@ -2,7 +2,12 @@
 """
 @author:XuMing(xuming624@qq.com)
 @description: WebResearcher Agent implementing the IterResearch paradigm.
+
+Supports two tool calling modes:
+1. OpenAI Function Calling (default): Uses OpenAI-style tools parameter, works with OpenAI/DeepSeek/etc.
+2. XML Protocol: Uses <tool_call> tags, compatible with all LLMs including local models
 """
+import json
 import json5
 import re
 import datetime
@@ -11,13 +16,20 @@ import random
 import time
 
 from typing import Any, Callable, Dict, List, Optional
-from openai import OpenAI, APIError, APIConnectionError, APITimeoutError
+from openai import (
+    AsyncOpenAI,
+    APIError,
+    APIConnectionError,
+    APITimeoutError,
+    RateLimitError,
+    AuthenticationError,
+)
 import inspect
 import sys
 sys.path.append('..')
-from webresearcher.base import Message, build_text_completion_prompt, count_tokens as count_tokens_base
+from webresearcher.base import Message, today_date, build_text_completion_prompt, count_tokens as count_tokens_base
 from webresearcher.log import logger
-from webresearcher.prompt import get_iterresearch_system_prompt
+from webresearcher.prompt import get_iterresearch_system_prompt, get_iterresearch_system_prompt_fc, TOOL_DESCRIPTIONS
 from webresearcher.tool_file import FileParser
 from webresearcher.tool_scholar import Scholar
 from webresearcher.tool_python import PythonInterpreter
@@ -28,8 +40,7 @@ from webresearcher.config import (
     LLM_BASE_URL, 
     OBS_START, 
     OBS_END, 
-    MAX_LLM_CALL_PER_RUN, 
-    AGENT_TIMEOUT, 
+    MAX_LLM_CALL_PER_RUN,
     FILE_DIR,
     LLM_MODEL_NAME
 )
@@ -43,10 +54,6 @@ TOOL_CLASS = [
     PythonInterpreter(),
 ]
 TOOL_MAP = {tool.name: tool for tool in TOOL_CLASS}
-
-
-def today_date():
-    return datetime.date.today().strftime("%Y-%m-%d")
 
 
 class ResearchRound:
@@ -95,7 +102,9 @@ class WebResearcherAgent:
     3. Tool Execution (execute the tool and get result)
     4. Synthesis (update report by integrating new information)
     
-    This agent is fully independent and does not inherit from external frameworks.
+    Supports two tool calling modes:
+    - use_xml_protocol=True (default): XML-based <tool_call> tags, works better for IterResearch paradigm
+    - use_xml_protocol=False: OpenAI-style function calling, works with OpenAI/DeepSeek/etc.
     """
 
     def __init__(
@@ -106,6 +115,7 @@ class WebResearcherAgent:
             api_key: Optional[str] = None,
             base_url: Optional[str] = None,
             model: Optional[str] = None,
+            use_xml_protocol: bool = True,  # XML protocol works better for IterResearch paradigm
     ):
         llm_config = dict(llm_config or {})
         if api_key:
@@ -115,7 +125,7 @@ class WebResearcherAgent:
 
         self.llm_config = llm_config
         self.llm_generate_cfg = self.llm_config.get("generate_cfg", {})
-        self.model = model or self.llm_config.get("model", LLM_MODEL_NAME)  # 主模型
+        self.model = model or self.llm_config.get("model", LLM_MODEL_NAME)
         self.api_key = self.llm_config.get("api_key", LLM_API_KEY)
         self.base_url = self.llm_config.get("base_url", LLM_BASE_URL)
         self.max_input_tokens = self.llm_config.get("max_input_tokens", 32000)
@@ -123,6 +133,25 @@ class WebResearcherAgent:
         self.agent_timeout = self.llm_config.get("agent_timeout", 1800.0)
         self.function_list = function_list or list(TOOL_MAP.keys())
         self.instruction = instruction
+        self.use_xml_protocol = use_xml_protocol
+
+    def _get_tool_definitions(self) -> List[Dict]:
+        """Get tool definitions in OpenAI function calling format."""
+        tools = []
+        for tool_name in self.function_list:
+            if tool_name in TOOL_DESCRIPTIONS:
+                tools.append(TOOL_DESCRIPTIONS[tool_name])
+            else:
+                # Fallback for custom tools
+                tools.append({
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "description": f"Custom tool '{tool_name}'",
+                        "parameters": {"type": "object", "properties": {}, "required": []}
+                    }
+                })
+        return tools
 
     def parse_output(self, text: str) -> Dict[str, str]:
         """
@@ -166,57 +195,92 @@ class WebResearcherAgent:
 
         return output
 
-    async def call_server(self, msgs: List[Dict], stop_sequences: List[str] = None,
-                          max_tries: int = 1) -> str:
-        """异步方法，并使用 run_in_executor 处理同步的 OpenAI 库"""
-        client = OpenAI(
-            api_key=self.api_key,
+    async def call_server(
+            self, 
+            msgs: List[Dict], 
+            stop_sequences: Optional[List[str]] = None,
+            max_tries: int = 3,
+            tools: Optional[List[Dict]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Call LLM server with support for both XML-based and native function calling.
+        Uses AsyncOpenAI for true async concurrency.
+        
+        Returns:
+            Dict with keys:
+            - content: str, the text content
+            - reasoning_content: Optional[str], thinking process (for models like DeepSeek R1)
+            - tool_calls: Optional[List], native tool calls (when use_xml_protocol=False)
+            - raw_message: the original message object
+        """
+        client = AsyncOpenAI(
+            api_key=self.api_key or "EMPTY",
             base_url=self.base_url,
             timeout=self.llm_timeout,
         )
 
         base_sleep_time = 1
-        loop = asyncio.get_event_loop()
-
-        stop_sequences = stop_sequences or ["<tool_response>"]
+        stop_sequences = stop_sequences or (["<tool_response>"] if self.use_xml_protocol else None)
 
         for attempt in range(max_tries):
             try:
                 request_params = {
                     "model": self.model,
                     "messages": msgs,
-                    "stop": stop_sequences,
                     "temperature": self.llm_generate_cfg.get('temperature', 0.6),
                     "top_p": self.llm_generate_cfg.get('top_p', 0.95),
                     "presence_penalty": self.llm_generate_cfg.get('presence_penalty', 1.1)
                 }
+                
+                # Add stop sequences only for XML mode
+                if stop_sequences and self.use_xml_protocol:
+                    request_params["stop"] = stop_sequences
+                
+                # Add tools for function calling mode (non-XML)
+                if tools and not self.use_xml_protocol:
+                    request_params["tools"] = tools
+                
+                # Add extra_body for thinking mode (DeepSeek R1 etc.)
                 model_thinking_type = self.llm_generate_cfg.get("model_thinking_type", "")
                 if model_thinking_type:
                     request_params["extra_body"] = {
-                        "thinking": {
-                            "type": model_thinking_type,
-                        }
+                        "thinking": {"type": model_thinking_type}
                     }
-                # [关键] 使用 run_in_executor 在线程池中运行同步的 blocking I/O
-                chat_response = await loop.run_in_executor(
-                    None,  # 使用默认的 ThreadPoolExecutor
-                    lambda: client.chat.completions.create(**request_params)
+                
+                # Use native async call
+                chat_response = await client.chat.completions.create(**request_params)
+
+                message = chat_response.choices[0].message
+                content = message.content or ""
+                
+                # Extract reasoning_content if available (DeepSeek R1, etc.)
+                reasoning_content = getattr(message, 'reasoning_content', None)
+                
+                # Extract native tool_calls if available
+                tool_calls = getattr(message, 'tool_calls', None)
+                
+                logger.debug(
+                    f"Input messages: {msgs}, \n"
+                    f"Reasoning_content: {reasoning_content}, \n"
+                    f"Tool_calls: {tool_calls}, \n"
+                    f"LLM Response: {content}"
                 )
+                
+                return {
+                    "content": content.strip() if content else "",
+                    "reasoning_content": reasoning_content,
+                    "tool_calls": tool_calls,
+                    "raw_message": message,
+                }
 
-                content = chat_response.choices[0].message.content
-                reasoning_content = None
-                if hasattr(chat_response.choices[0].message, 'reasoning_content') and chat_response.choices[
-                    0].message.reasoning_content:
-                    reasoning_content = chat_response.choices[0].message.reasoning_content
-                logger.debug(f"input messages: {msgs}, \nreasoning_content: {reasoning_content}, \nLLM Response: {content}")
-                if content and content.strip():
-                    return content.strip()
-                else:
-                    logger.warning(f"Attempt {attempt + 1}: Empty response received.")
-
+            except RateLimitError as e:
+                logger.warning(f"Attempt {attempt + 1} rate limit error: {e}")
+            except AuthenticationError as e:
+                logger.error(f"Authentication error: {e}")
+                break  # Don't retry auth errors
             except (APIError, APIConnectionError, APITimeoutError) as e:
                 logger.warning(
-                    f"Attempt {attempt + 1} API error: {e}, base_url: {self.base_url}, api_key: {self.api_key}, model: {self.model}")
+                    f"Attempt {attempt + 1} API error: {e}, base_url: {self.base_url}, model: {self.model}")
             except Exception as e:
                 logger.error(f"Attempt {attempt + 1} unexpected error: {e}")
 
@@ -224,10 +288,16 @@ class WebResearcherAgent:
                 sleep_time = base_sleep_time * (2 ** attempt) + random.uniform(0, 1)
                 sleep_time = min(sleep_time, 30)
                 logger.warning(f"Retrying in {sleep_time:.2f}s...")
-                await asyncio.sleep(sleep_time)  # [关键] 使用 await asyncio.sleep
+                await asyncio.sleep(sleep_time)
             else:
                 logger.error("All retry attempts exhausted. The LLM call failed.")
-        return "LLM server error."
+        
+        return {
+            "content": "LLM server error.",
+            "reasoning_content": None,
+            "tool_calls": None,
+            "raw_message": None,
+        }
 
     def count_tokens(self, messages, model=None):
         """Count tokens in messages"""
@@ -250,22 +320,58 @@ class WebResearcherAgent:
             logger.warning(f"Failed to count tokens: {e}. Using simple split.")
             return sum(len(str(x).split()) for x in messages)
 
-    async def custom_call_tool(self, tool_call_str: str) -> str:
-        """async方法，并正确处理同步/异步工具"""
+    async def _execute_function_call(self, tool_call) -> str:
+        """Execute an OpenAI-style function call."""
+        func_name = tool_call.function.name
+        args_str = tool_call.function.arguments
+        
+        logger.debug(f"Function call: {func_name}({args_str})")
+        
+        if func_name not in TOOL_MAP:
+            return f"Error: Tool {func_name} not found"
+        
+        try:
+            args = json.loads(args_str) if args_str else {}
+        except json.JSONDecodeError:
+            return f"Error: Failed to decode arguments: {args_str}"
+        
+        tool = TOOL_MAP[func_name]
+        loop = asyncio.get_event_loop()
+        
+        try:
+            # Special handling for python tool: extract code from arguments
+            if func_name == "python":
+                code = args.get("code", "")
+                if not code:
+                    return "[Python Interpreter Error]: Empty code. Please provide code in arguments.code"
+                result = await loop.run_in_executor(None, tool.call, code)
+                return result if isinstance(result, str) else str(result)
+            
+            if asyncio.iscoroutinefunction(tool.call):
+                if func_name == "parse_file":
+                    params = {"files": args.get("files")}
+                    result = await tool.call(params, file_root_path=FILE_DIR)
+                else:
+                    result = await tool.call(args)
+            else:
+                result = await loop.run_in_executor(None, tool.call, args)
+            return result if isinstance(result, str) else str(result)
+        except Exception as e:
+            logger.error(f"Tool execution failed: {e}")
+            return f"Error: Tool execution failed. {e}"
+
+    async def _execute_xml_tool(self, tool_call_str: str) -> str:
+        """Execute a tool call from XML <tool_call> block."""
         loop = asyncio.get_event_loop()
 
         try:
-            # 1. 优先检查是否包含 <code> 标签（处理 Python 代码）
-            # 支持多种格式：
-            # - python\n<code>...</code>
-            # - <code>...</code>
-            # - {"name": "python", ...}\n<code>...</code>
+            # Check for <code> tag (Python code in XML mode)
             if "<code>" in tool_call_str and "</code>" in tool_call_str:
                 code_raw = tool_call_str.split("<code>", 1)[1].rsplit("</code>", 1)[0].strip()
                 result = await loop.run_in_executor(None, TOOL_MAP['python'].call, code_raw)
                 return result
 
-            # 2. 处理 JSON 工具调用
+            # Parse JSON tool call
             tool_call = json5.loads(tool_call_str)
             tool_name = tool_call.get('name', '')
             tool_args = tool_call.get('arguments', {})
@@ -275,17 +381,22 @@ class WebResearcherAgent:
 
             tool = TOOL_MAP[tool_name]
 
-            # 3. [关键] 区分同步和异步工具
+            # Special handling for python tool: extract code from arguments
+            if tool_name == "python":
+                code = tool_args.get("code", "")
+                if not code:
+                    return "[Python Interpreter Error]: Empty code. Please provide code in arguments.code"
+                result = await loop.run_in_executor(None, tool.call, code)
+                return str(result) if not isinstance(result, str) else result
+
+            # Handle async/sync tools
             if asyncio.iscoroutinefunction(tool.call):
-                # 如果工具本身是 async (例如 FileParser)
                 if tool_name == "parse_file":
                     params = {"files": tool_args.get("files")}
                     result = await tool.call(params, file_root_path=FILE_DIR)
                 else:
-                    result = await tool.call(tool_args)  # 假设其他 async 工具
+                    result = await tool.call(tool_args)
             else:
-                # 如果工具是 sync (例如 Search, Visit, Scholar)
-                # 在 executor 中运行
                 result = await loop.run_in_executor(None, tool.call, tool_args)
 
             return str(result) if not isinstance(result, str) else result
@@ -296,9 +407,13 @@ class WebResearcherAgent:
 
     async def run(self, question, progress_callback: Optional[Callable[[Dict[str, Any]], Any]] = None):
         """
-        严格按照 IterResearch 范式执行研究（单 LLM 调用）。
+        Execute research following the IterResearch paradigm.
         
-        循环如下:
+        Supports two modes:
+        - Function Calling (default): Uses OpenAI-style tools parameter
+        - XML Protocol: Uses <tool_call> tags in prompts
+        
+        Loop:
         s_t = (Q, R_{i-1}, O_{i-1})
         LLM(s_t) -> (Plan_i, Report_i, Action_i)
         
@@ -323,11 +438,23 @@ class WebResearcherAgent:
 
         start_time = time.time()
 
-        # 1. 初始化研究轮次
+        # Initialize research round
         research_round = ResearchRound(question=question)
-        system_prompt = get_iterresearch_system_prompt(today_date(), self.function_list, self.instruction, question=question)
+        
+        # Build system prompt based on mode (XML mode uses detailed prompt, function calling uses simpler one)
+        if self.use_xml_protocol:
+            system_prompt = get_iterresearch_system_prompt(
+                today_date(), self.function_list, self.instruction, question=question
+            )
+        else:
+            system_prompt = get_iterresearch_system_prompt_fc(
+                today_date(), self.instruction, question=question
+            )
+        
+        # Get tool definitions for function calling mode
+        tool_definitions = self._get_tool_definitions() if not self.use_xml_protocol else None
 
-        # 完整轨迹日志（用于调试）
+        # Trajectory log for debugging
         full_trajectory_log = []
         prediction = ''
         termination = ''
@@ -345,21 +472,20 @@ class WebResearcherAgent:
             round_num += 1
             num_llm_calls_available -= 1
 
-            # 2. 构建提示 (s_t = Q, R_{i-1}, O_{i-1})
+            # Build prompt (s_t = Q, R_{i-1}, O_{i-1})
             current_context = research_round.get_context(system_prompt)
 
             if round_num == 1:
-                full_trajectory_log.extend(current_context)  # 仅记录初始上下文
+                full_trajectory_log.extend(current_context)
 
-            # 3. 单次 LLM 调用 (生成 P_i, R_i, A_i)
-            content = ''
-            request_msgs = ''
-            is_last_call = False
+            # Single LLM call (generate P_i, R_i, A_i)
+            request_msgs = current_context
+            is_last_call = (num_llm_calls_available == 0)
+            
             try:
                 logger.debug(f"Round {round_num}: Calling LLM. Remaining calls: {num_llm_calls_available}")
 
-                # If this is the last available LLM call, force final answer generation instead of further tool calls
-                is_last_call = (num_llm_calls_available == 0)
+                # Force final answer on last call
                 if is_last_call:
                     finalize_instruction = (
                         "You have reached the maximum allowed LLM calls for this run. "
@@ -368,12 +494,27 @@ class WebResearcherAgent:
                         "<plan>...</plan> <report>...</report> <answer>...</answer>"
                     )
                     request_msgs = current_context + [{"role": "user", "content": finalize_instruction}]
+
+                response = await self.call_server(request_msgs, tools=tool_definitions)
+                content = response["content"]
+                reasoning_content = response["reasoning_content"]
+                tool_calls = response["tool_calls"]
+                raw_message = response["raw_message"]
+
+                # Log reasoning content if available
+                if reasoning_content:
+                    logger.info(f"[Round {round_num}] Thinking: {reasoning_content[:500]}...")
+                    await emit({"type": "thinking", "round": round_num, "content": reasoning_content})
+
+                # Build assistant message for trajectory (preserving reasoning_content)
+                if raw_message:
+                    msg_dict = raw_message.model_dump(exclude_none=True)
+                    if reasoning_content:
+                        msg_dict['reasoning_content'] = reasoning_content
+                    full_trajectory_log.append(msg_dict)
                 else:
-                    request_msgs = current_context
-
-                content = await self.call_server(request_msgs)
-
-                full_trajectory_log.append({"role": "assistant", "content": content})
+                    full_trajectory_log.append({"role": "assistant", "content": content})
+                
                 logger.debug(f'Round {round_num} LLM response received.')
             except Exception as e:
                 logger.error(f"Unknown Error: {e}")
@@ -381,7 +522,45 @@ class WebResearcherAgent:
                 termination = 'unknown error'
                 break
 
-            # 4. 解析 LLM 的结构化输出 (P_i, R_i, A_i / Answer_i)
+            # === Function Calling Mode: Handle native tool calls ===
+            if not self.use_xml_protocol and tool_calls:
+                # Execute each tool call
+                tool_results = []
+                for tool_call in tool_calls:
+                    tool_result = await self._execute_function_call(tool_call)
+                    logger.debug(f"Tool {tool_call.function.name} result: {tool_result[:200]}...")
+                    
+                    await emit({
+                        "type": "tool",
+                        "round": round_num,
+                        "tool_name": tool_call.function.name,
+                        "tool_args": tool_call.function.arguments,
+                        "observation": tool_result[:1000],
+                    })
+                    tool_results.append(tool_result)
+                
+                # Update observation with combined tool results
+                research_round.last_observation = "\n\n".join(tool_results)
+                
+                # Parse any report/answer from content (LLM may still output structured response)
+                if content:
+                    parsed = self.parse_output(content)
+                    if parsed["report"]:
+                        research_round.current_report = parsed["report"]
+                    if parsed["answer"]:
+                        prediction = parsed["answer"]
+                        termination = 'answer found'
+                        await emit({
+                            "type": "final",
+                            "round": round_num,
+                            "answer": prediction,
+                            "report": research_round.current_report,
+                            "termination": termination,
+                        })
+                        break
+                continue
+
+            # === XML Protocol Mode: Parse structured output ===
             parsed = self.parse_output(content)
             plan_content = parsed["plan"]
             report_content = parsed["report"]
@@ -405,20 +584,16 @@ class WebResearcherAgent:
                 "action": action_content,
                 "answer": answer_content,
                 "terminate": terminate_flag,
+                "reasoning_content": reasoning_content,
             })
 
-            # 5. 状态更新 (s_t -> s_{t+1})
-
-            # 5.1 更新报告 (R_i)
-            # 无论 LLM 接下来是调用工具还是回答，它都必须生成一份新报告。
-            # 这份新报告 R_i 将用于 s_{t+1}
+            # Update report (R_i)
             if report_content:
                 research_round.current_report = report_content
             else:
-                # 如果LLM没有生成新报告，我们沿用上一轮的报告
                 logger.warning("No <report> found. Report will not be updated for the next round.")
 
-            # 5.2 检查是否终止
+            # Check for termination
             if answer_content:
                 prediction = answer_content
                 termination = 'answer found'
@@ -433,11 +608,9 @@ class WebResearcherAgent:
                 })
                 logger.debug(f"Round {round_num}: LLM provided <answer>. Terminating loop.")
                 break
+            
             if terminate_flag:
-                if terminate_reason:
-                    prediction = terminate_reason
-                else:
-                    prediction = research_round.current_report.strip()
+                prediction = terminate_reason if terminate_reason else research_round.current_report.strip()
                 termination = 'terminated by llm'
                 await emit({
                     "type": "final",
@@ -448,7 +621,8 @@ class WebResearcherAgent:
                 })
                 logger.debug(f"Round {round_num}: LLM signaled <terminate>. Final response prepared.")
                 break
-            if 'is_last_call' in locals() and is_last_call:
+            
+            if is_last_call:
                 fallback_report = research_round.current_report.strip()
                 fallback_source = fallback_report or terminate_reason
                 prediction = fallback_source if fallback_source else research_round.last_observation
@@ -463,13 +637,13 @@ class WebResearcherAgent:
                 logger.warning("Last LLM call did not return <answer> or <terminate>. Promoting accumulated content as final answer.")
                 break
 
-            # 5.3 执行 Action (A_i)
+            # Execute Action (A_i)
             if action_content:
                 try:
                     logger.debug(f"Round {round_num}: Executing tool...")
-                    tool_response_str = await self.custom_call_tool(action_content)
+                    tool_response_str = await self._execute_xml_tool(action_content)
 
-                    # 将工具响应 O_i 存储，用于下一轮 s_{t+1}
+                    # Store tool response O_i for next round s_{t+1}
                     research_round.last_observation = tool_response_str
                     await emit({
                         "type": "tool",
@@ -478,7 +652,7 @@ class WebResearcherAgent:
                         "observation": tool_response_str,
                     })
 
-                    # 记录工具响应到完整日志
+                    # Log tool response
                     tool_obs_msg = f"{OBS_START}\n{tool_response_str}\n{OBS_END}"
                     full_trajectory_log.append({"role": "user", "content": tool_obs_msg})
 
@@ -496,10 +670,9 @@ class WebResearcherAgent:
                     })
                     full_trajectory_log.append({"role": "user", "content": f"{OBS_START}\n{error_str}\n{OBS_END}"})
             else:
-                # LLM 既没有回答也没有调用工具
+                # LLM produced neither answer nor tool call
                 logger.warning("LLM did not produce <answer> or <tool_call>. Forcing answer generation...")
 
-                # 强制生成答案
                 force_answer_msgs = current_context + [
                     {"role": "user", "content": (
                         "You did not provide a valid response format. "
@@ -510,7 +683,8 @@ class WebResearcherAgent:
                 ]
 
                 try:
-                    forced_content = await self.call_server(force_answer_msgs)
+                    forced_response = await self.call_server(force_answer_msgs, tools=None)
+                    forced_content = forced_response["content"]
                     forced_parsed = self.parse_output(forced_content)
 
                     if forced_parsed["answer"]:
@@ -536,19 +710,19 @@ class WebResearcherAgent:
                     termination = "format error"
                     break
 
-            # 5.4 Token 限制检查
-            token_count = self.count_tokens(request_msgs if 'request_msgs' in locals() else current_context)
+            # Token limit check
+            token_count = self.count_tokens(request_msgs)
             logger.debug(f"Round {round_num} context token count: {token_count}")
             if token_count > self.max_input_tokens:
                 logger.warning(f"Token quantity exceeds the limit: {token_count}")
-                # 强制生成答案
                 force_answer_msgs = current_context + [
                     {"role": "user", "content": "You have now reached the maximum context length. "
                                                 "Stop making tool calls. Based on your research report, "
                                                 "provide the final answer in the three-part format: "
                                                 "<plan>...</plan> <report>...</report> <answer>...</answer>"}
                 ]
-                content = await self.call_server(force_answer_msgs)
+                forced_response = await self.call_server(force_answer_msgs, tools=None)
+                content = forced_response["content"]
                 parsed = self.parse_output(content)
                 prediction = parsed["answer"] if parsed["answer"] else "No answer found (token limit)."
                 termination = 'token limit reached'
@@ -562,7 +736,7 @@ class WebResearcherAgent:
                 full_trajectory_log.append({"role": "assistant", "content": content})
                 break
 
-        # 循环结束后的收尾
+        # Finalize
         if not prediction:
             fallback_report = research_round.current_report.strip()
             if fallback_report:
@@ -576,7 +750,7 @@ class WebResearcherAgent:
                 prediction = 'No answer found.'
                 termination = 'answer not found'
 
-        # 返回最终结果
+        # Return final result
         result = {
             "question": question,
             "prediction": prediction,
