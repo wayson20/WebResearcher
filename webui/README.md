@@ -42,7 +42,6 @@
 ### 1. 安装依赖
 
 ```bash
-cd webui
 pip install -r requirements.txt
 ```
 
@@ -63,6 +62,7 @@ export LLM_MODEL_NAME="gpt-4o"
 ### 3. 启动服务
 
 ```bash
+cd webui
 python app.py
 ```
 
